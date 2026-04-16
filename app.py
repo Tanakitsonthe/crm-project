@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import mysql.connector
 import jwt
@@ -7,159 +7,213 @@ import datetime
 app = Flask(__name__)
 CORS(app)
 
-SECRET_KEY = "mysecretkey"
+SECRET_KEY = "secret123"
 
+# ======================
+# 🔌 CONNECT DATABASE
+# ======================
 def get_db():
     return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="1230",   # 👈 ของคุณ
+        host="YOUR_HOST",
+        user="YOUR_USER",
+        password="YOUR_PASSWORD",
         database="crm_db"
     )
 
-# ================= REGISTER =================
-@app.route('/register', methods=['POST'])
+# ======================
+# 🏠 SERVE FRONTEND
+# ======================
+@app.route("/")
+def home():
+    return send_from_directory("frontend", "index.html")
+
+# ======================
+# 👤 REGISTER
+# ======================
+@app.route("/register", methods=["POST"])
 def register():
     data = request.json
-    conn = get_db()
-    c = conn.cursor()
+    username = data["username"]
+    password = data["password"]
 
-    c.execute(
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute(
         "INSERT INTO users (username, password) VALUES (%s, %s)",
-        (data['username'], data['password'])
+        (username, password)
     )
 
-    conn.commit()
-    conn.close()
-    return {"message": "registered"}
+    db.commit()
+    cursor.close()
+    db.close()
 
-# ================= LOGIN =================
-@app.route('/login', methods=['POST'])
+    return jsonify({"message": "registered"})
+
+
+# ======================
+# 🔐 LOGIN
+# ======================
+@app.route("/login", methods=["POST"])
 def login():
     data = request.json
-    conn = get_db()
-    c = conn.cursor()
+    username = data["username"]
+    password = data["password"]
 
-    c.execute(
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+
+    cursor.execute(
         "SELECT * FROM users WHERE username=%s AND password=%s",
-        (data['username'], data['password'])
+        (username, password)
     )
+    user = cursor.fetchone()
 
-    user = c.fetchone()
-    conn.close()
+    cursor.close()
+    db.close()
 
     if user:
         token = jwt.encode({
-            "user_id": user[0],
-            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+            "user_id": user["id"],
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=5)
         }, SECRET_KEY, algorithm="HS256")
 
-        return {"token": token}
+        return jsonify({"token": token})
 
-    return {"message": "login failed"}, 401
+    return jsonify({"message": "login failed"}), 401
 
-# ================= VERIFY TOKEN =================
-def verify_token(token):
-    try:
-        return jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-    except:
-        return None
 
-# ================= ADD CUSTOMER =================
-@app.route('/add_customer', methods=['POST'])
+# ======================
+# ➕ ADD CUSTOMER
+# ======================
+@app.route("/add_customer", methods=["POST"])
 def add_customer():
-    token = request.headers.get('Authorization')
-    user = verify_token(token)
+    token = request.headers.get("Authorization")
 
-    if not user:
-        return {"message": "unauthorized"}, 401
+    if not token:
+        return jsonify({"message": "no token"}), 403
+
+    try:
+        data_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        user_id = data_token["user_id"]
+    except:
+        return jsonify({"message": "invalid token"}), 403
 
     data = request.json
-    name = data['name']
-    phone = data['phone']
-    tag = data.get('tag', 'New')
+    name = data["name"]
+    phone = data["phone"]
 
-    conn = get_db()
-    c = conn.cursor()
+    db = get_db()
+    cursor = db.cursor()
 
-    c.execute(
-        "INSERT INTO customers (user_id, name, phone, tag) VALUES (%s, %s, %s, %s)",
-        (user['user_id'], name, phone, tag)
+    cursor.execute(
+        "INSERT INTO customers (user_id, name, phone) VALUES (%s, %s, %s)",
+        (user_id, name, phone)
     )
 
-    conn.commit()
-    conn.close()
+    db.commit()
+    cursor.close()
+    db.close()
 
-    return {"message": "added"}
+    return jsonify({"message": "added"})
 
-# ================= GET CUSTOMERS =================
-@app.route('/customers', methods=['GET'])
-def customers():
-    token = request.headers.get('Authorization')
-    user = verify_token(token)
 
-    if not user:
-        return {"message": "unauthorized"}, 401
+# ======================
+# 📋 GET CUSTOMERS
+# ======================
+@app.route("/customers", methods=["GET"])
+def get_customers():
+    token = request.headers.get("Authorization")
 
-    conn = get_db()
-    c = conn.cursor()
+    if not token:
+        return jsonify([])
 
-    c.execute(
-        "SELECT id, name, phone, tag FROM customers WHERE user_id=%s",
-        (user['user_id'],)
+    try:
+        data_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        user_id = data_token["user_id"]
+    except:
+        return jsonify([])
+
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+
+    cursor.execute(
+        "SELECT * FROM customers WHERE user_id=%s",
+        (user_id,)
     )
+    customers = cursor.fetchall()
 
-    data = c.fetchall()
-    conn.close()
+    cursor.close()
+    db.close()
 
-    return jsonify(data)
+    return jsonify(customers)
 
-# ================= DASHBOARD =================
-@app.route('/dashboard', methods=['GET'])
+
+# ======================
+# 📊 DASHBOARD
+# ======================
+@app.route("/dashboard", methods=["GET"])
 def dashboard():
-    token = request.headers.get('Authorization')
-    user = verify_token(token)
+    token = request.headers.get("Authorization")
 
-    conn = get_db()
-    c = conn.cursor()
+    try:
+        data_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        user_id = data_token["user_id"]
+    except:
+        return jsonify({"count": 0})
 
-    c.execute("""
-        SELECT tag, COUNT(*) 
-        FROM customers 
-        WHERE user_id=%s 
-        GROUP BY tag
-    """, (user['user_id'],))
+    db = get_db()
+    cursor = db.cursor()
 
-    data = c.fetchall()
-    conn.close()
+    cursor.execute(
+        "SELECT COUNT(*) FROM customers WHERE user_id=%s",
+        (user_id,)
+    )
+    count = cursor.fetchone()[0]
 
-    return {"data": data}
+    cursor.close()
+    db.close()
 
-# ================= AI =================
-@app.route('/ai', methods=['GET'])
+    return jsonify({"count": count})
+
+
+# ======================
+# 🤖 AI ANALYSIS
+# ======================
+@app.route("/ai", methods=["GET"])
 def ai():
-    token = request.headers.get('Authorization')
-    user = verify_token(token)
+    token = request.headers.get("Authorization")
 
-    conn = get_db()
-    c = conn.cursor()
+    try:
+        data_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        user_id = data_token["user_id"]
+    except:
+        return jsonify({"insight": "no data"})
 
-    c.execute("SELECT tag, COUNT(*) FROM customers WHERE user_id=%s GROUP BY tag", (user['user_id'],))
-    data = dict(c.fetchall())
+    db = get_db()
+    cursor = db.cursor()
 
-    conn.close()
+    cursor.execute(
+        "SELECT COUNT(*) FROM customers WHERE user_id=%s",
+        (user_id,)
+    )
+    count = cursor.fetchone()[0]
 
-    vip = data.get('VIP', 0)
-    new = data.get('New', 0)
+    cursor.close()
+    db.close()
 
-    if vip > 5:
-        insight = "ลูกค้า VIP เยอะ ควรทำโปรพิเศษ"
-    elif new > 5:
-        insight = "ลูกค้าใหม่เยอะ รีบปิดการขาย"
+    if count == 0:
+        msg = "ยังไม่มีลูกค้า"
+    elif count < 5:
+        msg = "ลูกค้ายังน้อย ควรเพิ่มการตลาด"
     else:
-        insight = "ควรเพิ่มลูกค้าใหม่"
+        msg = "ลูกค้าดีแล้ว รักษาความสัมพันธ์ไว้"
 
-    return {"insight": insight}
+    return jsonify({"insight": msg})
 
-if __name__ == '__main__':
+
+# ======================
+# 🚀 RUN
+# ======================
+if __name__ == "__main__":
     app.run(debug=True)
