@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CRM</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+<h2>CRM</h2>
+
+<p id="user">Not logged in</p>
+
+<button onclick="register()">สมัคร</button>
+<button onclick="login()">ล็อกอิน</button>
+<button onclick="logout()">ออก</button>
+
+<br><br>
+
+<input id="name" placeholder="ชื่อ">
+<input id="phone" placeholder="เบอร์">
+<input id="tag" placeholder="Tag (VIP/New)">
+<button onclick="addCustomer()">เพิ่มลูกค้า</button>
+
+<h3>Dashboard</h3>
+<canvas id="chart"></canvas>
+
+<h3>AI</h3>
+<p id="ai"></p>
+
+<h3>Customers</h3>
+<ul id="list"></ul>
+
+<script src="script.js"></script>
+
+</body>
+</html>
