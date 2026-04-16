@@ -14,10 +14,11 @@ SECRET_KEY = "secret123"
 # ======================
 def get_db():
     return mysql.connector.connect(
-        host="YOUR_HOST",
-        user="YOUR_USER",
-        password="YOUR_PASSWORD",
-        database="crm_db"
+        host="mysql.railway.internal",
+        user="root",
+        password="tSDDaSlUK0qzOIEVtDZiupdTpLxCspqs",
+        database="railway",
+        port=3306
     )
 
 # ======================
