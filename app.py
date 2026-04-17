@@ -218,6 +218,9 @@ def dashboard(user_id):
 def ai():
     return jsonify({"insight": "🔥 ลูกค้าคุณโตเร็วมาก! ถึงเวลาอัปเกรดแล้ว"})
 
+@app.route("/landing")
+def landing():
+    return send_from_directory("frontend", "landing.html")
 
 # ================= RUN =================
 if __name__ == "__main__":
