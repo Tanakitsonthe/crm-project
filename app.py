@@ -9,7 +9,7 @@ from functools import wraps
 app = Flask(__name__, static_folder="frontend")
 CORS(app)
 
-SECRET = "supersecret123"
+SECRET = os.getenv("SECRET_KEY", "supersecret123")
 
 # ================= DB =================
 def get_db():
@@ -21,7 +21,7 @@ def get_db():
         port=int(os.getenv("MYSQLPORT"))
     )
 
-# ================= AUTO CREATE TABLE =================
+# ================= CREATE TABLE =================
 def create_tables():
     db = get_db()
     cursor = db.cursor()
@@ -47,7 +47,6 @@ def create_tables():
 
     db.commit()
 
-
 # ================= TOKEN =================
 def token_required(f):
     @wraps(f)
@@ -68,16 +67,18 @@ def token_required(f):
 
     return decorated
 
-
 # ================= FRONT =================
 @app.route("/")
 def home():
     return send_from_directory("frontend", "index.html")
 
+@app.route("/landing")
+def landing():
+    return send_from_directory("frontend", "landing.html")
+
 @app.route("/<path:path>")
 def static_files(path):
     return send_from_directory("frontend", path)
-
 
 # ================= AUTH =================
 @app.route("/register", methods=["POST"])
@@ -94,7 +95,6 @@ def register():
     db.commit()
 
     return jsonify({"message": "registered"})
-
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -123,7 +123,6 @@ def login():
 
     return jsonify({"error": "login failed"}), 401
 
-
 # ================= CUSTOMER =================
 @app.route("/customers", methods=["POST"])
 @token_required
@@ -133,6 +132,16 @@ def add_customer(user_id):
     db = get_db()
     cursor = db.cursor()
 
+    # 🔥 LIMIT FREE PLAN
+    cursor.execute("SELECT COUNT(*) FROM customers WHERE user_id=%s", (user_id,))
+    count = cursor.fetchone()[0]
+
+    cursor.execute("SELECT plan FROM users WHERE id=%s", (user_id,))
+    plan = cursor.fetchone()[0]
+
+    if plan == "free" and count >= 5:
+        return jsonify({"error": "upgrade required"}), 403
+
     cursor.execute(
         "INSERT INTO customers (user_id, name, phone, tag) VALUES (%s, %s, %s, %s)",
         (user_id, data["name"], data["phone"], data["tag"])
@@ -140,7 +149,6 @@ def add_customer(user_id):
     db.commit()
 
     return jsonify({"message": "added"})
-
 
 @app.route("/customers", methods=["GET"])
 @token_required
@@ -154,24 +162,6 @@ def get_customers(user_id):
     )
 
     return jsonify(cursor.fetchall())
-
-
-@app.route("/customers/<int:id>", methods=["PUT"])
-@token_required
-def update_customer(user_id, id):
-    data = request.json
-
-    db = get_db()
-    cursor = db.cursor()
-
-    cursor.execute(
-        "UPDATE customers SET name=%s, phone=%s, tag=%s WHERE id=%s AND user_id=%s",
-        (data["name"], data["phone"], data["tag"], id, user_id)
-    )
-    db.commit()
-
-    return jsonify({"message": "updated"})
-
 
 @app.route("/customers/<int:id>", methods=["DELETE"])
 @token_required
@@ -187,40 +177,17 @@ def delete_customer(user_id, id):
 
     return jsonify({"message": "deleted"})
 
-
-# ================= DASHBOARD =================
-@app.route("/dashboard")
+# ================= UPGRADE =================
+@app.route("/upgrade", methods=["POST"])
 @token_required
-def dashboard(user_id):
+def upgrade(user_id):
     db = get_db()
     cursor = db.cursor()
 
-    cursor.execute(
-        "SELECT COUNT(*) FROM customers WHERE user_id=%s",
-        (user_id,)
-    )
-    total = cursor.fetchone()[0]
+    cursor.execute("UPDATE users SET plan='pro' WHERE id=%s", (user_id,))
+    db.commit()
 
-    cursor.execute(
-        "SELECT COUNT(*) FROM customers WHERE user_id=%s AND tag='VIP'",
-        (user_id,)
-    )
-    vip = cursor.fetchone()[0]
-
-    return jsonify({
-        "total": total,
-        "vip": vip
-    })
-
-
-# ================= AI =================
-@app.route("/ai")
-def ai():
-    return jsonify({"insight": "🔥 ลูกค้าคุณโตเร็วมาก! ถึงเวลาอัปเกรดแล้ว"})
-
-@app.route("/landing")
-def landing():
-    return send_from_directory("frontend", "landing.html")
+    return jsonify({"message": "upgraded"})
 
 # ================= RUN =================
 if __name__ == "__main__":
