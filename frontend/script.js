@@ -397,7 +397,7 @@ async function upgrade() {
   currentPlan = "pro";
   localStorage.setItem("plan", "pro");
   await refreshAll();
-  showPage("dashboardPage");
+  showPage("billingPage");
   alert("อัปเกรดสำเร็จ");
 }
 
@@ -493,10 +493,6 @@ function applySearchFilter() {
   document.querySelectorAll('[data-row="customer"]').forEach((row) => {
     row.style.display = row.innerText.toLowerCase().includes(query) ? "" : "none";
   });
-}
-
-function toggleSidebar() {
-  document.body.classList.toggle("sidebar-open");
 }
 
 function bindGlobalEvents() {

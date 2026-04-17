@@ -8,18 +8,12 @@
   --text: #e2e8f0;
   --blue: #2563eb;
   --blue-2: #7c3aed;
-  --green: #10b981;
-  --warning: #f59e0b;
   --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
-html, body {
-  min-height: 100%;
-}
+html, body { min-height: 100%; }
 
 body {
   margin: 0;
@@ -32,17 +26,11 @@ body {
   background-attachment: fixed;
 }
 
-body.sidebar-open {
-  overflow: hidden;
-}
+body.sidebar-open { overflow: hidden; }
 
-.hidden {
-  display: none !important;
-}
+.hidden { display: none !important; }
 
-.text-soft {
-  color: var(--soft);
-}
+.text-soft { color: var(--soft); }
 
 .link-soft {
   color: #bfdbfe;
@@ -327,13 +315,8 @@ body.sidebar-open {
   color: #fca5a5;
 }
 
-.page {
-  display: none;
-}
-
-.page.active {
-  display: block;
-}
+.page { display: none; }
+.page.active { display: block; }
 
 .hero-card {
   display: grid;
@@ -436,27 +419,14 @@ body.sidebar-open {
 }
 
 .metric-grid,
-.settings-grid,
-.feature-grid,
-.pricing-grid {
+.settings-grid {
   display: grid;
   gap: 16px;
 }
 
-.metric-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
+.metric-grid,
 .settings-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.feature-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.pricing-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .stat-card,
@@ -464,7 +434,6 @@ body.sidebar-open {
 .payment-card,
 .crm-card,
 .feature-card,
-.pricing-card,
 .footer-cta {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -495,13 +464,11 @@ body.sidebar-open {
 .chart-card,
 .payment-card,
 .crm-card,
-.feature-card,
-.pricing-card {
+.feature-card {
   padding: 20px;
 }
 
-.feature-card .feature-list,
-.payment-card .feature-list {
+.feature-list {
   margin: 0;
   padding-left: 18px;
   color: #cbd5e1;
@@ -525,9 +492,7 @@ body.sidebar-open {
   max-width: 340px;
 }
 
-.table-card {
-  overflow: hidden;
-}
+.table-card { overflow: hidden; }
 
 .crm-table {
   margin-bottom: 0;
@@ -703,9 +668,18 @@ body.sidebar-open {
   gap: 12px;
 }
 
-.feature-card h4,
-.pricing-card h4 {
-  margin-bottom: 10px;
+.pricing-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.pricing-card {
+  padding: 20px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
 }
 
 .pricing-card .price {
@@ -720,19 +694,12 @@ body.sidebar-open {
   margin-bottom: 0;
 }
 
-.billing-note {
-  color: var(--soft);
-  font-size: 0.92rem;
-}
-
 .sidebar-backdrop {
   display: none;
 }
 
 @media (max-width: 991.98px) {
-  .app-shell {
-    display: block;
-  }
+  .app-shell { display: block; }
 
   .sidebar {
     position: fixed;
@@ -770,7 +737,6 @@ body.sidebar-open {
   .landing-hero,
   .billing-grid,
   .metric-grid,
-  .feature-grid,
   .pricing-grid,
   .settings-grid {
     grid-template-columns: 1fr;
@@ -797,21 +763,22 @@ body.sidebar-open {
   }
 
   .landing-nav,
-  .hero-card,
   .landing-hero {
     padding: 18px;
   }
 
   .topbar-actions {
     gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .badge-pill {
     padding: 9px 12px;
   }
 
-  .landing-copy h1,
-  .hero-copy h2 {
+  .hero-copy h2,
+  .landing-copy h1 {
     max-width: none;
   }
 }
