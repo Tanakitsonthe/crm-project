@@ -5,6 +5,25 @@ let currentRole = localStorage.getItem("role") || "user";
 let editCustomerId = null;
 let tagChart = null;
 
+const pageMeta = {
+  dashboardPage: {
+    title: "Dashboard",
+    subtitle: "ภาพรวมลูกค้า แผนสมาชิก และยอดใช้งาน"
+  },
+  customersPage: {
+    title: "Customers",
+    subtitle: "จัดการลูกค้า ค้นหา แก้ไข และลบข้อมูล"
+  },
+  billingPage: {
+    title: "Billing",
+    subtitle: "PromptPay และการปลดล็อก PRO"
+  },
+  settingsPage: {
+    title: "Settings",
+    subtitle: "โปรไฟล์ บัญชี และสิทธิ์การใช้งาน"
+  }
+};
+
 function $(id) {
   return document.getElementById(id);
 }
@@ -21,6 +40,8 @@ function escapeHtml(value) {
 function showAuth() {
   $("auth").classList.remove("hidden");
   $("app").classList.add("hidden");
+  closeSidebar();
+  closeProfileMenu();
 }
 
 function showApp() {
@@ -36,10 +57,26 @@ function closeSidebar() {
   document.body.classList.remove("sidebar-open");
 }
 
+function toggleProfileMenu(event) {
+  if (event) event.stopPropagation();
+  $("profileMenu").classList.toggle("open");
+}
+
+function closeProfileMenu() {
+  $("profileMenu").classList.remove("open");
+}
+
+function updateSidebarPlan(plan) {
+  const sidebarPlanText = $("sidebarPlanText");
+  if (sidebarPlanText) {
+    sidebarPlanText.textContent = (plan || "free").toUpperCase();
+  }
+}
+
 function showPage(pageId) {
   document.querySelectorAll(".page").forEach((page) => {
-    page.style.display = "none";
     page.classList.remove("active");
+    page.style.display = "none";
   });
 
   const target = $(pageId);
@@ -50,28 +87,55 @@ function showPage(pageId) {
 
   document.querySelectorAll("[data-nav]").forEach((btn) => btn.classList.remove("active"));
   const activeNav = document.querySelector(`[data-nav="${pageId}"]`);
-  if (activeNav) activeNav.classList.add("active");
+  if (activeNav) {
+    activeNav.classList.add("active");
+  }
 
-  if (window.innerWidth < 992) closeSidebar();
+  const meta = pageMeta[pageId] || pageMeta.dashboardPage;
+  $("pageTitle").textContent = meta.title;
+  $("pageSubtitle").textContent = meta.subtitle;
+
+  closeProfileMenu();
+
+  if (window.innerWidth < 992) {
+    closeSidebar();
+  }
 }
 
 function setPlanUI(plan, remaining, role) {
+  const normalizedPlan = plan || "free";
+  const normalizedRole = role || "user";
+
   const planBadge = $("planBadge");
-  planBadge.textContent = plan ? plan.toUpperCase() : "FREE";
-  planBadge.classList.remove("plan-free", "plan-pro");
-  planBadge.classList.add(plan === "pro" ? "plan-pro" : "plan-free");
+  planBadge.textContent = normalizedPlan.toUpperCase();
+  planBadge.classList.remove("plan-pro");
+  if (normalizedPlan === "pro") {
+    planBadge.classList.add("plan-pro");
+  }
 
-  const roleBadge = $("roleBadge");
-  roleBadge.textContent = (role || "user").toUpperCase();
-
-  $("remainingCount").textContent = plan === "pro" ? "∞" : String(remaining ?? 0);
-  $("paymentNote").textContent = plan === "pro"
+  $("roleBadge").textContent = normalizedRole.toUpperCase();
+  $("remainingCount").textContent = normalizedPlan === "pro" ? "∞" : String(remaining ?? 0);
+  $("paymentNote").textContent = normalizedPlan === "pro"
     ? "คุณใช้งาน PRO แล้ว"
     : "สแกน QR แล้วกดยืนยัน";
 
-  $("upgradeBtn").disabled = plan === "pro";
+  $("heroPlanText").textContent = normalizedPlan.toUpperCase();
+  $("heroRoleText").textContent = normalizedRole.toUpperCase();
+  $("heroRemainingText").textContent = normalizedPlan === "pro" ? "∞" : String(remaining ?? 0);
+
+  $("billingPlanText").textContent = normalizedPlan.toUpperCase();
+  $("billingRemainingText").textContent = normalizedPlan === "pro" ? "∞" : String(remaining ?? 0);
+  $("billingStatusText").textContent = normalizedPlan === "pro" ? "Unlocked" : "Ready";
+
   $("settingsUser").textContent = currentUser || "-";
-  $("settingsRole").textContent = (role || "user").toUpperCase();
+  $("settingsRole").textContent = normalizedRole.toUpperCase();
+  $("settingsPlan").textContent = normalizedPlan.toUpperCase();
+
+  document.querySelectorAll("[data-upgrade-btn]").forEach((btn) => {
+    btn.disabled = normalizedPlan === "pro";
+  });
+
+  updateSidebarPlan(normalizedPlan);
 }
 
 async function register() {
@@ -124,9 +188,9 @@ async function login() {
     localStorage.setItem("plan", currentPlan);
     localStorage.setItem("role", currentRole);
 
-    $("userLine").textContent = `${currentUser} • ${currentPlan.toUpperCase()}`;
     showApp();
     showPage("dashboardPage");
+    $("userLine").textContent = `${currentUser} • ${currentPlan.toUpperCase()}`;
     await refreshAll();
   } catch (error) {
     alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
@@ -142,6 +206,8 @@ function logout() {
   currentUser = "";
   currentPlan = "free";
   currentRole = "user";
+  closeSidebar();
+  closeProfileMenu();
   location.reload();
 }
 
@@ -168,8 +234,8 @@ async function loadDashboard() {
   $("totalCount").textContent = data.total ?? 0;
   $("vipCount").textContent = data.vip ?? 0;
   $("userLine").textContent = `${currentUser} • ${String(data.plan || "free").toUpperCase()}`;
-  setPlanUI(data.plan || "free", data.remaining, data.role || currentRole);
 
+  setPlanUI(data.plan || "free", data.remaining, data.role || currentRole);
   renderChart(data);
 }
 
@@ -189,7 +255,7 @@ async function loadCustomers() {
     return;
   }
 
-  const tbody = $("customers");
+  const tbody = $("customerRows");
   tbody.innerHTML = "";
 
   if (!data.length) {
@@ -331,6 +397,7 @@ async function upgrade() {
   currentPlan = "pro";
   localStorage.setItem("plan", "pro");
   await refreshAll();
+  showPage("dashboardPage");
   alert("อัปเกรดสำเร็จ");
 }
 
@@ -378,17 +445,40 @@ function renderChart(data) {
       labels: ["New", "VIP", "Regular"],
       datasets: [{
         data: [counts.New || 0, counts.VIP || 0, counts.Regular || 0],
-        borderWidth: 0
+        backgroundColor: [
+          "rgba(96, 165, 250, 0.95)",
+          "rgba(245, 158, 11, 0.95)",
+          "rgba(16, 185, 129, 0.95)"
+        ],
+        borderColor: "#0b1220",
+        borderWidth: 3,
+        hoverOffset: 6
       }]
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
+      cutout: "72%",
+      animation: {
+        duration: 800,
+        easing: "easeOutQuart"
+      },
       plugins: {
         legend: {
           position: "bottom",
           labels: {
-            color: "#e5eefb"
+            color: "#e5eefb",
+            usePointStyle: true,
+            pointStyle: "circle",
+            padding: 18
           }
+        },
+        tooltip: {
+          backgroundColor: "#0b1320",
+          titleColor: "#ffffff",
+          bodyColor: "#e5eefb",
+          borderColor: "rgba(148, 163, 184, 0.2)",
+          borderWidth: 1
         }
       }
     }
@@ -396,33 +486,47 @@ function renderChart(data) {
 }
 
 function applySearchFilter() {
-  const query = $("search").value.toLowerCase();
+  const searchInput = $("search");
+  if (!searchInput) return;
+
+  const query = searchInput.value.toLowerCase();
   document.querySelectorAll('[data-row="customer"]').forEach((row) => {
     row.style.display = row.innerText.toLowerCase().includes(query) ? "" : "none";
   });
 }
 
-function bindNavClicks() {
-  document.querySelectorAll("[data-nav]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll("[data-nav]").forEach((x) => x.classList.remove("active"));
-      btn.classList.add("active");
-    });
+function toggleSidebar() {
+  document.body.classList.toggle("sidebar-open");
+}
+
+function bindGlobalEvents() {
+  document.addEventListener("click", () => {
+    closeProfileMenu();
   });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeSidebar();
+      closeProfileMenu();
+    }
+  });
+
+  const searchInput = $("search");
+  if (searchInput) {
+    searchInput.addEventListener("input", applySearchFilter);
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  bindNavClicks();
-
-  $("search").addEventListener("input", applySearchFilter);
+  bindGlobalEvents();
 
   if (token) {
     currentUser = localStorage.getItem("username") || "";
     currentPlan = localStorage.getItem("plan") || "free";
     currentRole = localStorage.getItem("role") || "user";
-    $("userLine").textContent = currentUser ? `${currentUser} • ${currentPlan.toUpperCase()}` : "พร้อมใช้งาน";
     showApp();
     showPage("dashboardPage");
+    updateSidebarPlan(currentPlan);
     refreshAll();
   } else {
     showAuth();

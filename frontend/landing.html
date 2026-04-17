@@ -5,72 +5,127 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CRM PRO - ระบบจัดการลูกค้า</title>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 
-  <div class="container py-5">
-    <div class="crm-card p-5 mb-4 fade-up">
-      <div class="brand-chip mb-3">CRM PRO</div>
-      <h1 class="display-6 fw-bold mb-3">อัปเกรดร้านของคุณให้ดูเป็นมืออาชีพ</h1>
-      <p class="lead text-soft mb-4">
-        ระบบจัดการลูกค้า + Dashboard + PromptPay สำหรับร้านค้าออนไลน์และธุรกิจขนาดเล็ก
-      </p>
+  <div class="landing-shell">
+    <div class="crm-card landing-nav fade-up">
+      <div class="landing-brand">
+        <span class="brand-chip">CRM PRO</span>
+        <span class="text-soft">SaaS CRM</span>
+      </div>
       <div class="d-flex flex-wrap gap-2">
-        <a href="/" class="btn btn-main">ทดลองใช้งานฟรี</a>
-        <a href="#pricing" class="btn btn-outline-custom">ดูราคา</a>
+        <a href="#pricing" class="btn btn-outline-custom">ราคา</a>
+        <a href="/" class="btn btn-main">เข้าสู่ระบบ</a>
       </div>
     </div>
 
-    <div class="row g-3 mb-4">
-      <div class="col-md-4">
-        <div class="stat-card h-100 fade-up">
-          <div class="stat-label">📋 จัดการลูกค้า</div>
-          <div class="stat-value">ง่าย</div>
-          <p class="text-soft mb-0">บันทึกชื่อ เบอร์ และ tag ได้อย่างรวดเร็ว</p>
+    <section class="crm-card landing-hero fade-up">
+      <div class="landing-copy">
+        <div class="section-chip landing-kicker">Built to sell</div>
+        <h1>อัปเกรดร้านของคุณให้ดูเป็นมืออาชีพ</h1>
+        <p class="lead mb-4">
+          ระบบ CRM ที่ออกแบบให้เหมือนสินค้า SaaS จริง: sidebar แบบบริษัท, dashboard ชัด,
+          billing พร้อม PromptPay และหน้าตาเหมาะกับการโพสต์ขายลูกค้า
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="/" class="btn btn-main">ทดลองใช้งานฟรี</a>
+          <a href="#pricing" class="btn btn-outline-custom">ดูราคา</a>
         </div>
       </div>
-      <div class="col-md-4">
-        <div class="stat-card h-100 fade-up">
-          <div class="stat-label">🔍 ค้นหาเร็ว</div>
-          <div class="stat-value">ไว</div>
-          <p class="text-soft mb-0">ค้นหาลูกค้าได้ในไม่กี่วินาที ไม่ต้องเสียเวลาไล่ดูทีละคน</p>
+
+      <div class="landing-preview">
+        <div class="hero-panel">
+          <div class="mini-stat">
+            <span>Free plan</span>
+            <strong>5 customers</strong>
+          </div>
+          <div class="mini-stat">
+            <span>Pro plan</span>
+            <strong>Unlimited</strong>
+          </div>
+          <div class="mini-stat">
+            <span>Payment</span>
+            <strong>PromptPay</strong>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="section-head">
+            <div>
+              <h4 class="mb-1">ทำไมลูกค้าถึงซื้อ</h4>
+              <div class="text-soft small">จุดขายที่เข้าใจง่ายใน 3 วินาที</div>
+            </div>
+          </div>
+          <ul class="feature-list mb-0">
+            <li>จัดการลูกค้าได้ชัดเจน</li>
+            <li>อัปเกรด PRO ง่าย</li>
+            <li>Dashboard ดูโปรกว่าโปรเจกต์ทั่วไป</li>
+          </ul>
         </div>
       </div>
-      <div class="col-md-4">
-        <div class="stat-card h-100 fade-up">
-          <div class="stat-label">📊 Dashboard</div>
-          <div class="stat-value">ชัด</div>
-          <p class="text-soft mb-0">เห็นภาพรวมลูกค้าทั้งหมด และลูกค้า VIP ได้ทันที</p>
-        </div>
+    </section>
+
+    <div class="feature-grid my-4">
+      <div class="feature-card fade-up">
+        <div class="section-chip mb-3">Customer</div>
+        <h4>จัดการลูกค้า</h4>
+        <p class="text-soft mb-0">เพิ่ม ค้นหา แก้ไข และลบข้อมูลได้อย่างรวดเร็ว</p>
+      </div>
+
+      <div class="feature-card fade-up">
+        <div class="section-chip mb-3">Dashboard</div>
+        <h4>เห็นภาพรวมชัด</h4>
+        <p class="text-soft mb-0">มองจำนวนลูกค้า VIP และสถานะ plan ได้ทันที</p>
+      </div>
+
+      <div class="feature-card fade-up">
+        <div class="section-chip mb-3">Billing</div>
+        <h4>PromptPay พร้อมใช้</h4>
+        <p class="text-soft mb-0">ปิดการขายด้วย QR ที่ลูกค้าสแกนได้เลย</p>
       </div>
     </div>
 
-    <section id="pricing" class="crm-card fade-up">
-      <h2 class="mb-4">💰 ราคา</h2>
+    <section id="pricing" class="crm-card fade-up mb-4">
+      <div class="section-head">
+        <div>
+          <h2 class="mb-1">💰 ราคา</h2>
+          <div class="text-soft small">ออกแบบให้เริ่มฟรี แล้วอัปเกรดได้ง่าย</div>
+        </div>
+      </div>
 
-      <div class="row g-3">
-        <div class="col-md-6">
-          <div class="stat-card h-100">
-            <div class="stat-label">Free</div>
-            <div class="stat-value">0 บาท</div>
-            <p class="text-soft mb-0">ลูกค้า 5 คน • เหมาะสำหรับทดลองใช้งาน</p>
-          </div>
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <div class="section-chip mb-3">Free</div>
+          <div class="price">0 บาท</div>
+          <p class="pricing-note">ลูกค้า 5 คน • เหมาะสำหรับทดลองใช้งาน</p>
         </div>
 
-        <div class="col-md-6">
-          <div class="stat-card h-100">
-            <div class="stat-label">Pro</div>
-            <div class="stat-value">199 บาท/เดือน</div>
-            <p class="text-soft mb-0">ไม่จำกัดลูกค้า • Dashboard + Tag • พร้อมใช้งานจริง</p>
-          </div>
+        <div class="pricing-card">
+          <div class="section-chip mb-3">Pro</div>
+          <div class="price">199 บาท/เดือน</div>
+          <p class="pricing-note">ไม่จำกัดลูกค้า • Dashboard + Tag • พร้อมใช้งานจริง</p>
         </div>
       </div>
 
       <div class="mt-4 d-flex flex-wrap gap-2">
         <a href="/" class="btn btn-main">เริ่มใช้ฟรี</a>
         <a href="/" class="btn btn-outline-custom">กลับหน้า Login</a>
+      </div>
+    </section>
+
+    <section class="footer-cta fade-up">
+      <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+        <div>
+          <h3 class="mb-1">พร้อมเอาไปโพสต์ขายแล้ว</h3>
+          <div class="text-soft">UI ดูเป็นบริษัทจริง และฟีเจอร์พร้อมใช้ในงานจริง</div>
+        </div>
+        <a href="/" class="btn btn-main">เปิดระบบ</a>
       </div>
     </section>
   </div>
