@@ -5,7 +5,6 @@ import jwt
 import datetime
 import os
 from functools import wraps
-import urllib.parse as urlparse
 
 app = Flask(__name__, static_folder="frontend")
 CORS(app)
@@ -13,12 +12,14 @@ CORS(app)
 SECRET = os.getenv("SECRET_KEY", "supersecret123")
 
 # ================= DB =================
+import urllib.parse as urlparse
+
 def get_db():
     try:
         url = os.getenv("MYSQL_PUBLIC_URL")
 
         if not url:
-            print("❌ NO MYSQL_PUBLIC_URL")
+            print("❌ MYSQL_PUBLIC_URL not found")
             return None
 
         url = urlparse.urlparse(url)
@@ -30,6 +31,7 @@ def get_db():
             database=url.path[1:],
             port=url.port
         )
+
     except Exception as e:
         print("DB ERROR:", e)
         return None
@@ -199,5 +201,9 @@ def upgrade(user_id):
 
 # ================= START =================
 if __name__ == "__main__":
-    create_tables()
+    try:
+        create_tables()
+    except:
+        print("skip create table")
+
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
