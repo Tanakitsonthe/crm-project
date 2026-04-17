@@ -88,6 +88,22 @@
         </div>
       </div>
 
+      <div id="impersonationBanner" class="crm-card mb-3 d-none">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+          <div>
+            <div class="section-chip">Impersonation mode</div>
+            <div class="mt-2">
+              คุณกำลังดูระบบในมุมของ:
+              <strong id="impersonationName">-</strong>
+            </div>
+            <div class="text-soft small">
+              ใช้เช็ค PRO แบบลูกค้าจริง แล้วกดกลับเป็นแอดมินได้ทันที
+            </div>
+          </div>
+          <button class="btn btn-main" onclick="returnToAdmin()">Back to admin</button>
+        </div>
+      </div>
+
       <section id="dashboardPage" class="page active fade-up">
         <div class="hero-card">
           <div class="hero-copy">
@@ -307,6 +323,31 @@
 
           <div class="mt-4 text-soft small">
             ถ้าตั้ง `ADMIN_USERNAME` ใน Railway บัญชีชื่อนั้นจะถูกสร้างเป็น admin อัตโนมัติ
+          </div>
+        </div>
+
+        <div id="adminPanel" class="crm-card mt-3 d-none">
+          <div class="section-head">
+            <div>
+              <h4 class="mb-1">Admin panel</h4>
+              <div class="text-soft small">ดู user ทั้งระบบ ปรับ plan และเปิดดูระบบในมุมลูกค้าได้</div>
+            </div>
+            <span class="mini-pill">Owner only</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table align-middle crm-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Plan</th>
+                  <th>Role</th>
+                  <th>Customers</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="adminUsersRows"></tbody>
+            </table>
           </div>
         </div>
       </section>

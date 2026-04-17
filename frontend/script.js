@@ -37,6 +37,10 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function isImpersonating() {
+  return Boolean(localStorage.getItem("crm_admin_backup_token"));
+}
+
 function showAuth() {
   $("auth").classList.remove("hidden");
   $("app").classList.add("hidden");
@@ -70,6 +74,31 @@ function updateSidebarPlan(plan) {
   const sidebarPlanText = $("sidebarPlanText");
   if (sidebarPlanText) {
     sidebarPlanText.textContent = (plan || "free").toUpperCase();
+  }
+}
+
+function updateImpersonationBanner() {
+  const banner = $("impersonationBanner");
+  const name = $("impersonationName");
+
+  if (!banner || !name) return;
+
+  const active = isImpersonating();
+  banner.classList.toggle("d-none", !active);
+  if (active) {
+    name.textContent = currentUser || "-";
+  }
+}
+
+function updateAdminPanelVisibility() {
+  const adminPanel = $("adminPanel");
+  if (!adminPanel) return;
+
+  const visible = currentRole === "admin" && !isImpersonating();
+  adminPanel.classList.toggle("d-none", !visible);
+
+  if (visible) {
+    loadAdminUsers();
   }
 }
 
@@ -136,6 +165,8 @@ function setPlanUI(plan, remaining, role) {
   });
 
   updateSidebarPlan(normalizedPlan);
+  updateImpersonationBanner();
+  updateAdminPanelVisibility();
 }
 
 async function register() {
@@ -202,6 +233,10 @@ function logout() {
   localStorage.removeItem("username");
   localStorage.removeItem("plan");
   localStorage.removeItem("role");
+  localStorage.removeItem("crm_admin_backup_token");
+  localStorage.removeItem("crm_admin_backup_username");
+  localStorage.removeItem("crm_admin_backup_plan");
+  localStorage.removeItem("crm_admin_backup_role");
   token = "";
   currentUser = "";
   currentPlan = "free";
@@ -209,6 +244,46 @@ function logout() {
   closeSidebar();
   closeProfileMenu();
   location.reload();
+}
+
+function saveAdminBackupOnce() {
+  if (isImpersonating()) return;
+
+  localStorage.setItem("crm_admin_backup_token", token);
+  localStorage.setItem("crm_admin_backup_username", currentUser);
+  localStorage.setItem("crm_admin_backup_plan", currentPlan);
+  localStorage.setItem("crm_admin_backup_role", currentRole);
+}
+
+async function returnToAdmin() {
+  const backupToken = localStorage.getItem("crm_admin_backup_token");
+  const backupUsername = localStorage.getItem("crm_admin_backup_username");
+  const backupPlan = localStorage.getItem("crm_admin_backup_plan");
+  const backupRole = localStorage.getItem("crm_admin_backup_role");
+
+  if (!backupToken || !backupUsername) {
+    alert("ไม่มี session แอดมินสำรอง");
+    return;
+  }
+
+  token = backupToken;
+  currentUser = backupUsername;
+  currentPlan = backupPlan || "pro";
+  currentRole = backupRole || "admin";
+
+  localStorage.setItem("token", token);
+  localStorage.setItem("username", currentUser);
+  localStorage.setItem("plan", currentPlan);
+  localStorage.setItem("role", currentRole);
+
+  localStorage.removeItem("crm_admin_backup_token");
+  localStorage.removeItem("crm_admin_backup_username");
+  localStorage.removeItem("crm_admin_backup_plan");
+  localStorage.removeItem("crm_admin_backup_role");
+
+  showApp();
+  showPage("dashboardPage");
+  await refreshAll();
 }
 
 async function refreshAll() {
@@ -405,6 +480,123 @@ function confirmPayment() {
   upgrade();
 }
 
+async function impersonateUser(id) {
+  saveAdminBackupOnce();
+
+  const res = await fetch(`/admin/impersonate/${id}`, {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${token}` }
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    alert(data.error || "impersonate ไม่สำเร็จ");
+    return;
+  }
+
+  token = data.token;
+  currentUser = data.username || "";
+  currentPlan = data.plan || "free";
+  currentRole = data.role || "user";
+
+  localStorage.setItem("token", token);
+  localStorage.setItem("username", currentUser);
+  localStorage.setItem("plan", currentPlan);
+  localStorage.setItem("role", currentRole);
+
+  showApp();
+  showPage("dashboardPage");
+  await refreshAll();
+}
+
+async function adminSetPlan(id, plan) {
+  const res = await fetch(`/admin/users/${id}/plan`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify({ plan })
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    alert(data.error || "อัปเดต plan ไม่สำเร็จ");
+    return;
+  }
+
+  await loadAdminUsers();
+  await refreshAll();
+}
+
+async function adminSetRole(id, role) {
+  const res = await fetch(`/admin/users/${id}/role`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify({ role })
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    alert(data.error || "อัปเดต role ไม่สำเร็จ");
+    return;
+  }
+
+  await loadAdminUsers();
+  await refreshAll();
+}
+
+async function loadAdminUsers() {
+  const tbody = $("adminUsersRows");
+  const adminPanel = $("adminPanel");
+  if (!tbody || !adminPanel) return;
+
+  if (currentRole !== "admin" || isImpersonating()) {
+    adminPanel.classList.add("d-none");
+    return;
+  }
+
+  adminPanel.classList.remove("d-none");
+
+  const res = await fetch("/admin/users", {
+    headers: { "Authorization": `Bearer ${token}` }
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" class="text-center text-soft py-4">โหลด admin panel ไม่ได้</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = data.map((row) => {
+    const planBadge = row.plan === "pro" ? "plan-pro" : "plan-free";
+    const canChangeSelf = row.username === currentUser;
+
+    return `
+      <tr>
+        <td>${escapeHtml(row.username)}</td>
+        <td><span class="badge-pill ${planBadge}">${escapeHtml(row.plan.toUpperCase())}</span></td>
+        <td>${escapeHtml(row.role.toUpperCase())}</td>
+        <td>${escapeHtml(row.customers)}</td>
+        <td class="d-flex flex-wrap gap-2">
+          <button class="btn btn-sm btn-outline-light" ${canChangeSelf ? "disabled" : ""} onclick="adminSetPlan(${row.id}, 'pro')">PRO</button>
+          <button class="btn btn-sm btn-outline-light" ${canChangeSelf ? "disabled" : ""} onclick="adminSetPlan(${row.id}, 'free')">FREE</button>
+          <button class="btn btn-sm btn-outline-light" ${canChangeSelf ? "disabled" : ""} onclick="adminSetRole(${row.id}, 'admin')">ADMIN</button>
+          <button class="btn btn-sm btn-outline-light" ${canChangeSelf ? "disabled" : ""} onclick="adminSetRole(${row.id}, 'user')">USER</button>
+          <button class="btn btn-sm btn-warning" onclick="impersonateUser(${row.id})">Open as</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
 function renderChartFromCustomers(customers) {
   const counts = {
     New: 0,
@@ -523,6 +715,7 @@ document.addEventListener("DOMContentLoaded", () => {
     showApp();
     showPage("dashboardPage");
     updateSidebarPlan(currentPlan);
+    updateImpersonationBanner();
     refreshAll();
   } else {
     showAuth();

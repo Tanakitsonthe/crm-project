@@ -17,9 +17,7 @@ app.config["JSON_AS_ASCII"] = False
 SECRET = os.getenv("SECRET_KEY", "change-this-secret")
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "").strip()
 
-# =========================
-# Password helpers
-# =========================
+
 def hash_password(password: str) -> str:
     salt = secrets.token_hex(16)
     digest = hashlib.pbkdf2_hmac(
@@ -35,7 +33,6 @@ def verify_password(stored_password: str, password: str) -> bool:
     if not stored_password:
         return False
 
-    # รองรับ password เก่าแบบ plaintext เพื่อไม่ให้ user เดิมล็อกอินไม่ได้
     if "$" not in stored_password:
         return hmac.compare_digest(stored_password, password)
 
@@ -49,9 +46,6 @@ def verify_password(stored_password: str, password: str) -> bool:
     return hmac.compare_digest(digest, stored_digest)
 
 
-# =========================
-# DB
-# =========================
 def get_db():
     try:
         public_url = os.getenv("MYSQL_PUBLIC_URL")
@@ -77,6 +71,41 @@ def get_db():
     except Exception as e:
         print("DB ERROR:", e)
         return None
+
+
+def get_user_record(user_id):
+    db = get_db()
+    if not db:
+        return None
+
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            """
+            SELECT id, username, COALESCE(plan,'free') AS plan, COALESCE(role,'user') AS role
+            FROM users
+            WHERE id=%s
+            LIMIT 1
+            """,
+            (user_id,)
+        )
+        user = cursor.fetchone()
+        if user and ADMIN_USERNAME and user["username"] == ADMIN_USERNAME:
+            user = dict(user)
+            user["role"] = "admin"
+            user["plan"] = "pro"
+        return user
+    finally:
+        cursor.close()
+        db.close()
+
+
+def is_admin_user(user):
+    if not user:
+        return False
+    if ADMIN_USERNAME and user["username"] == ADMIN_USERNAME:
+        return True
+    return str(user.get("role", "user")).lower() == "admin"
 
 
 def column_exists(cursor, table_name, column_name):
@@ -129,9 +158,6 @@ def create_tables():
     return True
 
 
-# =========================
-# Auth
-# =========================
 def token_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -151,9 +177,18 @@ def token_required(fn):
     return wrapper
 
 
-# =========================
-# Frontend
-# =========================
+def make_token(user_id, username):
+    return jwt.encode(
+        {
+            "user_id": user_id,
+            "username": username,
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=8),
+        },
+        SECRET,
+        algorithm="HS256",
+    )
+
+
 @app.route("/")
 def home():
     return send_from_directory("frontend", "index.html")
@@ -174,9 +209,6 @@ def healthz():
     return jsonify({"status": "ok"})
 
 
-# =========================
-# Auth routes
-# =========================
 @app.route("/register", methods=["POST"])
 def register():
     data = request.get_json(silent=True) or {}
@@ -201,10 +233,11 @@ def register():
 
         stored_password = hash_password(password)
         role = "admin" if ADMIN_USERNAME and username == ADMIN_USERNAME else "user"
+        plan = "pro" if role == "admin" else "free"
 
         cursor.execute(
-            "INSERT INTO users (username, password, plan, role) VALUES (%s, %s, 'free', %s)",
-            (username, stored_password, role)
+            "INSERT INTO users (username, password, plan, role) VALUES (%s, %s, %s, %s)",
+            (username, stored_password, plan, role)
         )
         db.commit()
         return jsonify({"message": "registered"})
@@ -232,8 +265,12 @@ def login():
     cursor = db.cursor(dictionary=True)
     try:
         cursor.execute(
-            "SELECT id, username, password, COALESCE(plan,'free') AS plan, COALESCE(role,'user') AS role "
-            "FROM users WHERE username=%s LIMIT 1",
+            """
+            SELECT id, username, password, COALESCE(plan,'free') AS plan, COALESCE(role,'user') AS role
+            FROM users
+            WHERE username=%s
+            LIMIT 1
+            """,
             (username,)
         )
         user = cursor.fetchone()
@@ -241,30 +278,26 @@ def login():
         if not user or not verify_password(user["password"], password):
             return jsonify({"error": "login failed"}), 401
 
-        token = jwt.encode(
-            {
-                "user_id": user["id"],
-                "username": user["username"],
-                "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=8),
-            },
-            SECRET,
-            algorithm="HS256",
-        )
+        plan = user["plan"]
+        role = user["role"]
+
+        if ADMIN_USERNAME and user["username"] == ADMIN_USERNAME:
+            plan = "pro"
+            role = "admin"
+
+        token = make_token(user["id"], user["username"])
 
         return jsonify({
             "token": token,
             "username": user["username"],
-            "plan": user["plan"],
-            "role": user["role"]
+            "plan": plan,
+            "role": role
         })
     finally:
         cursor.close()
         db.close()
 
 
-# =========================
-# Customer routes
-# =========================
 @app.route("/customers", methods=["GET"])
 @token_required
 def get_customers(user_id):
@@ -311,8 +344,8 @@ def add_customer(user_id):
     cursor = db.cursor(dictionary=True)
     try:
         cursor.execute("SELECT COALESCE(plan,'free') AS plan FROM users WHERE id=%s LIMIT 1", (user_id,))
-        user = cursor.fetchone()
-        plan = (user or {}).get("plan", "free")
+        user = cursor.fetchone() or {"plan": "free"}
+        plan = user["plan"]
 
         cursor.execute("SELECT COUNT(*) AS total FROM customers WHERE user_id=%s", (user_id,))
         total = cursor.fetchone()["total"]
@@ -403,12 +436,13 @@ def dashboard(user_id):
     cursor = db.cursor(dictionary=True)
     try:
         cursor.execute(
-            "SELECT COALESCE(plan,'free') AS plan, COALESCE(role,'user') AS role FROM users WHERE id=%s LIMIT 1",
+            "SELECT COALESCE(plan,'free') AS plan, COALESCE(role,'user') AS role, username FROM users WHERE id=%s LIMIT 1",
             (user_id,)
         )
-        user = cursor.fetchone() or {"plan": "free", "role": "user"}
-        plan = user["plan"]
-        role = user["role"]
+        user = cursor.fetchone() or {"plan": "free", "role": "user", "username": ""}
+        if ADMIN_USERNAME and user.get("username") == ADMIN_USERNAME:
+            user["plan"] = "pro"
+            user["role"] = "admin"
 
         cursor.execute("SELECT COUNT(*) AS total FROM customers WHERE user_id=%s", (user_id,))
         total = cursor.fetchone()["total"]
@@ -416,13 +450,13 @@ def dashboard(user_id):
         cursor.execute("SELECT COUNT(*) AS vip FROM customers WHERE user_id=%s AND tag='VIP'", (user_id,))
         vip = cursor.fetchone()["vip"]
 
-        remaining = None if plan == "pro" else max(0, 5 - total)
+        remaining = None if user["plan"] == "pro" else max(0, 5 - total)
 
         return jsonify({
             "total": total,
             "vip": vip,
-            "plan": plan,
-            "role": role,
+            "plan": user["plan"],
+            "role": user["role"],
             "remaining": remaining
         })
     finally:
@@ -448,6 +482,139 @@ def upgrade(user_id):
     finally:
         cursor.close()
         db.close()
+
+
+def require_admin(user_id):
+    user = get_user_record(user_id)
+    if not user or not is_admin_user(user):
+        return None
+    return user
+
+
+@app.route("/admin/users", methods=["GET"])
+@token_required
+def admin_users(user_id):
+    admin = require_admin(user_id)
+    if not admin:
+        return jsonify({"error": "forbidden"}), 403
+
+    db = get_db()
+    if not db:
+        return jsonify({"error": "database unavailable"}), 503
+
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            """
+            SELECT
+              u.id,
+              u.username,
+              COALESCE(u.plan,'free') AS plan,
+              COALESCE(u.role,'user') AS role,
+              COUNT(c.id) AS customers
+            FROM users u
+            LEFT JOIN customers c ON c.user_id = u.id
+            GROUP BY u.id, u.username, u.plan, u.role
+            ORDER BY u.id DESC
+            """
+        )
+        return jsonify(cursor.fetchall())
+    finally:
+        cursor.close()
+        db.close()
+
+
+@app.route("/admin/users/<int:target_user_id>/plan", methods=["PUT"])
+@token_required
+def admin_set_plan(user_id, target_user_id):
+    admin = require_admin(user_id)
+    if not admin:
+        return jsonify({"error": "forbidden"}), 403
+
+    data = request.get_json(silent=True) or {}
+    plan = (data.get("plan") or "").strip().lower()
+    if plan not in {"free", "pro"}:
+        return jsonify({"error": "invalid plan"}), 400
+
+    target = get_user_record(target_user_id)
+    if not target:
+        return jsonify({"error": "user not found"}), 404
+
+    if ADMIN_USERNAME and target["username"] == ADMIN_USERNAME and plan != "pro":
+        return jsonify({"error": "admin must stay pro"}), 400
+
+    db = get_db()
+    if not db:
+        return jsonify({"error": "database unavailable"}), 503
+
+    cursor = db.cursor()
+    try:
+        cursor.execute("UPDATE users SET plan=%s WHERE id=%s", (plan, target_user_id))
+        db.commit()
+        return jsonify({"message": "updated", "plan": plan})
+    finally:
+        cursor.close()
+        db.close()
+
+
+@app.route("/admin/users/<int:target_user_id>/role", methods=["PUT"])
+@token_required
+def admin_set_role(user_id, target_user_id):
+    admin = require_admin(user_id)
+    if not admin:
+        return jsonify({"error": "forbidden"}), 403
+
+    data = request.get_json(silent=True) or {}
+    role = (data.get("role") or "").strip().lower()
+    if role not in {"user", "admin"}:
+        return jsonify({"error": "invalid role"}), 400
+
+    target = get_user_record(target_user_id)
+    if not target:
+        return jsonify({"error": "user not found"}), 404
+
+    if ADMIN_USERNAME and target["username"] == ADMIN_USERNAME and role != "admin":
+        return jsonify({"error": "owner admin cannot be downgraded"}), 400
+
+    db = get_db()
+    if not db:
+        return jsonify({"error": "database unavailable"}), 503
+
+    cursor = db.cursor()
+    try:
+        cursor.execute("UPDATE users SET role=%s WHERE id=%s", (role, target_user_id))
+        db.commit()
+        return jsonify({"message": "updated", "role": role})
+    finally:
+        cursor.close()
+        db.close()
+
+
+@app.route("/admin/impersonate/<int:target_user_id>", methods=["POST"])
+@token_required
+def admin_impersonate(user_id, target_user_id):
+    admin = require_admin(user_id)
+    if not admin:
+        return jsonify({"error": "forbidden"}), 403
+
+    target = get_user_record(target_user_id)
+    if not target:
+        return jsonify({"error": "user not found"}), 404
+
+    token = make_token(target["id"], target["username"])
+    role = target["role"]
+    plan = target["plan"]
+
+    if ADMIN_USERNAME and target["username"] == ADMIN_USERNAME:
+        role = "admin"
+        plan = "pro"
+
+    return jsonify({
+        "token": token,
+        "username": target["username"],
+        "plan": plan,
+        "role": role
+    })
 
 
 if __name__ == "__main__":
