@@ -1,37 +1,141 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>CRM</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<title>CRM PRO</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {background:#0f172a;color:white;}
+.card {background:#1e293b;border-radius:12px;}
+</style>
 </head>
 
 <body>
+<div class="container mt-4">
 
-<h2>CRM</h2>
+<h2>🚀 CRM PRO</h2>
 
+<div class="card p-3 mb-3">
 <p id="user">Not logged in</p>
+<button onclick="register()" class="btn btn-primary">สมัคร</button>
+<button onclick="login()" class="btn btn-success">ล็อกอิน</button>
+<button onclick="logout()" class="btn btn-danger">ออก</button>
+</div>
 
-<button onclick="register()">สมัคร</button>
-<button onclick="login()">ล็อกอิน</button>
-<button onclick="logout()">ออก</button>
-
-<br><br>
-
+<div class="card p-3 mb-3">
 <input id="name" placeholder="ชื่อ">
 <input id="phone" placeholder="เบอร์">
-<input id="tag" placeholder="Tag (VIP/New)">
-<button onclick="addCustomer()">เพิ่มลูกค้า</button>
+<button onclick="addCustomer()" class="btn btn-primary mt-2">เพิ่ม</button>
+</div>
 
-<h3>Dashboard</h3>
+<div class="card p-3 mb-3">
+<h5>📊 Dashboard</h5>
 <canvas id="chart"></canvas>
+</div>
 
-<h3>AI</h3>
-<p id="ai"></p>
-
-<h3>Customers</h3>
 <ul id="list"></ul>
 
-<script src="script.js"></script>
+</div>
+
+<script>
+
+const API = "http://127.0.0.1:5000";
+
+function getToken(){
+  return localStorage.getItem("token");
+}
+
+function register(){
+  let username = prompt("user:");
+  let password = prompt("pass:");
+
+  fetch(API+"/register",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({username,password})
+  })
+  .then(()=>alert("สมัครสำเร็จ"));
+}
+
+function login(){
+  let username = prompt("user:");
+  let password = prompt("pass:");
+
+  fetch(API+"/login",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({username,password})
+  })
+  .then(res=>res.json())
+  .then(data=>{
+    if(data.token){
+      localStorage.setItem("token",data.token);
+      document.getElementById("user").innerText=data.username;
+      loadCustomers();
+    }
+  });
+}
+
+function logout(){
+  localStorage.clear();
+  location.reload();
+}
+
+function addCustomer(){
+  fetch(API+"/customers",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":"Bearer "+getToken()
+    },
+    body:JSON.stringify({
+      name:document.getElementById("name").value,
+      phone:document.getElementById("phone").value
+    })
+  })
+  .then(res=>{
+    if(res.status==403) alert("ต้องอัปเกรดแพ็กเกจ");
+    loadCustomers();
+  });
+}
+
+function loadCustomers(){
+  fetch(API+"/customers",{
+    headers:{
+      "Authorization":"Bearer "+getToken()
+    }
+  })
+  .then(res=>res.json())
+  .then(data=>{
+    let list=document.getElementById("list");
+    list.innerHTML="";
+
+    data.forEach(c=>{
+      list.innerHTML+=`<li>${c.name} - ${c.phone}</li>`;
+    });
+
+    loadChart(data);
+  });
+}
+
+function loadChart(data){
+  let ctx=document.getElementById("chart");
+
+  new Chart(ctx,{
+    type:"line",
+    data:{
+      labels:data.map((_,i)=>i+1),
+      datasets:[{
+        label:"Customers",
+        data:data.map((_,i)=>i+1)
+      }]
+    }
+  });
+}
+
+</script>
 
 </body>
 </html>

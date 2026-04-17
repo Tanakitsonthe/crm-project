@@ -1,5 +1,4 @@
 flask
 flask-cors
 mysql-connector-python
-pyjwt
-gunicorn
+PyJWT
