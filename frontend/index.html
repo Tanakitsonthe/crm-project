@@ -238,7 +238,11 @@
 
             <img src="/qr.png" alt="PromptPay QR" class="qr-image mb-3">
             <p id="paymentNote" class="text-soft small mb-3">สแกน QR แล้วกดยืนยัน</p>
-            <button class="btn btn-warning w-100" data-upgrade-btn onclick="confirmPayment()">ฉันโอนแล้ว</button>
+            <input type="file" id="slipFile" class="form-control mb-2" accept="image/*">
+  <button class="btn btn-main w-100" onclick="uploadSlip()">
+    ส่งสลิปให้แอดมิน
+  </button>
+  <div id="uploadStatus" class="text-soft small mt-2"></div>
           </div>
 
           <div class="feature-card">
