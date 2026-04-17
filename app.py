@@ -1,126 +1,80 @@
 from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
 import mysql.connector
-import jwt
-import datetime
 import os
-from functools import wraps
+from flask_cors import CORS
 
-app = Flask(__name__, static_folder="frontend")
+app = Flask(__name__, static_folder="static")
 CORS(app)
 
-SECRET = os.getenv("SECRET_KEY", "supersecret123")
-
-# ================= DB =================
-import urllib.parse as urlparse
-
+# =============================
+# 🔥 CONNECT DATABASE (Railway)
+# =============================
 def get_db():
-    try:
-        url = os.getenv("MYSQL_PUBLIC_URL")
+    return mysql.connector.connect(
+        host=os.getenv("MYSQLHOST"),
+        user=os.getenv("MYSQLUSER"),
+        password=os.getenv("MYSQLPASSWORD"),
+        database=os.getenv("MYSQLDATABASE"),
+        port=int(os.getenv("MYSQLPORT", 3306))
+    )
 
-        if not url:
-            print("❌ MYSQL_PUBLIC_URL not found")
-            return None
-
-        url = urlparse.urlparse(url)
-
-        return mysql.connector.connect(
-            host=url.hostname,
-            user=url.username,
-            password=url.password,
-            database=url.path[1:],
-            port=url.port
-        )
-
-    except Exception as e:
-        print("DB ERROR:", e)
-        return None
-
-# ================= SAFE TABLE CREATE =================
+# =============================
+# 🔥 CREATE TABLE
+# =============================
 def create_tables():
     db = get_db()
-    if not db:
-        print("❌ DB not ready → skip table create")
-        return
-
     cursor = db.cursor()
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(100),
-        password VARCHAR(100),
-        plan VARCHAR(20)
+        password VARCHAR(100)
     )
     """)
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS customers (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT,
         name VARCHAR(100),
-        phone VARCHAR(20),
-        tag VARCHAR(20)
+        phone VARCHAR(100),
+        tag VARCHAR(100)
     )
     """)
 
     db.commit()
-    print("✅ tables ready")
+    db.close()
 
-# ================= TOKEN =================
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        token = request.headers.get("Authorization")
+# =============================
+# 🔥 ROUTES
+# =============================
 
-        if not token:
-            return jsonify({"error": "No token"}), 401
-
-        try:
-            token = token.split(" ")[1]
-            data = jwt.decode(token, SECRET, algorithms=["HS256"])
-            user_id = data["user_id"]
-        except:
-            return jsonify({"error": "Invalid token"}), 401
-
-        return f(user_id, *args, **kwargs)
-
-    return decorated
-
-# ================= FRONT =================
 @app.route("/")
 def home():
-    return send_from_directory("frontend", "index.html")
+    return send_from_directory("static", "index.html")
 
-@app.route("/<path:path>")
-def static_files(path):
-    return send_from_directory("frontend", path)
-
-# ================= AUTH =================
 @app.route("/register", methods=["POST"])
 def register():
-    db = get_db()
-    if not db:
-        return jsonify({"error":"DB fail"}),500
-
     data = request.json
+
+    db = get_db()
     cursor = db.cursor()
 
     cursor.execute(
-        "INSERT INTO users (username, password, plan) VALUES (%s, %s, 'free')",
+        "INSERT INTO users (username, password) VALUES (%s, %s)",
         (data["username"], data["password"])
     )
-    db.commit()
 
-    return jsonify({"message": "registered"})
+    db.commit()
+    db.close()
+
+    return jsonify({"msg": "ok"})
 
 @app.route("/login", methods=["POST"])
 def login():
-    db = get_db()
-    if not db:
-        return jsonify({"error":"DB fail"}),500
-
     data = request.json
+
+    db = get_db()
     cursor = db.cursor(dictionary=True)
 
     cursor.execute(
@@ -129,81 +83,80 @@ def login():
     )
 
     user = cursor.fetchone()
+    db.close()
 
     if user:
-        token = jwt.encode({
-            "user_id": user["id"],
-            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=5)
-        }, SECRET, algorithm="HS256")
-
-        return jsonify({"token": token})
-
+        return jsonify({"token": "fake-token", "username": user["username"]})
     return jsonify({"error": "login failed"}), 401
 
-# ================= CUSTOMER =================
-@app.route("/customers", methods=["POST"])
-@token_required
-def add_customer(user_id):
-    db = get_db()
-    if not db:
-        return jsonify({"error":"DB fail"}),500
-
-    data = request.json
-    cursor = db.cursor()
-
-    # LIMIT
-    cursor.execute("SELECT COUNT(*) FROM customers WHERE user_id=%s", (user_id,))
-    count = cursor.fetchone()[0]
-
-    cursor.execute("SELECT plan FROM users WHERE id=%s", (user_id,))
-    plan = cursor.fetchone()[0]
-
-    if plan == "free" and count >= 5:
-        return jsonify({"error": "upgrade required"}), 403
-
-    cursor.execute(
-        "INSERT INTO customers (user_id, name, phone, tag) VALUES (%s,%s,%s,%s)",
-        (user_id, data["name"], data["phone"], data["tag"])
-    )
-    db.commit()
-
-    return jsonify({"message": "added"})
 
 @app.route("/customers", methods=["GET"])
-@token_required
-def get_customers(user_id):
+def get_customers():
     db = get_db()
-    if not db:
-        return jsonify({"error":"DB fail"}),500
-
     cursor = db.cursor(dictionary=True)
 
+    cursor.execute("SELECT * FROM customers")
+    data = cursor.fetchall()
+
+    db.close()
+    return jsonify(data)
+
+
+@app.route("/customers", methods=["POST"])
+def add_customer():
+    data = request.json
+
+    db = get_db()
+    cursor = db.cursor()
+
     cursor.execute(
-        "SELECT * FROM customers WHERE user_id=%s",
-        (user_id,)
+        "INSERT INTO customers (name, phone, tag) VALUES (%s, %s, %s)",
+        (data["name"], data["phone"], data["tag"])
     )
 
-    return jsonify(cursor.fetchall())
-
-# ================= UPGRADE =================
-@app.route("/upgrade", methods=["POST"])
-@token_required
-def upgrade(user_id):
-    db = get_db()
-    if not db:
-        return jsonify({"error":"DB fail"}),500
-
-    cursor = db.cursor()
-    cursor.execute("UPDATE users SET plan='pro' WHERE id=%s", (user_id,))
     db.commit()
+    db.close()
 
-    return jsonify({"message": "upgraded"})
+    return jsonify({"msg": "added"})
 
-# ================= START =================
+
+@app.route("/customers/<int:id>", methods=["DELETE"])
+def delete_customer(id):
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("DELETE FROM customers WHERE id=%s", (id,))
+    db.commit()
+    db.close()
+
+    return jsonify({"msg": "deleted"})
+
+
+@app.route("/dashboard")
+def dashboard():
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("SELECT COUNT(*) FROM customers")
+    total = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM customers WHERE tag='VIP'")
+    vip = cursor.fetchone()[0]
+
+    db.close()
+
+    return jsonify({
+        "total": total,
+        "vip": vip
+    })
+
+
+# =============================
+# 🔥 IMPORTANT FIX (แก้ 502 ตรงนี้)
+# =============================
 if __name__ == "__main__":
-    try:
-        create_tables()
-    except:
-        print("skip create table")
+    create_tables()
 
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+    port = int(os.environ.get("PORT", 8080))  # ✅ ห้ามใช้ 3306
+
+    app.run(host="0.0.0.0", port=port)
