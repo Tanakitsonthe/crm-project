@@ -13,12 +13,11 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-
   <div id="auth" class="auth-wrap">
     <div class="auth-card fade-up">
       <div class="brand-chip mb-3">CRM PRO</div>
-      <h1 class="auth-title mb-2">SaaS CRM สำหรับธุรกิจที่อยากดูโปร</h1>
-      <p class="text-soft mb-4">จัดการลูกค้า อัปเกรด PRO และปิดการขายด้วย UI ระดับบริษัทจริง</p>
+      <h1 class="auth-title mb-2">CRM สำหรับทีมขาย</h1>
+      <p class="text-soft mb-4">ลูกค้า • Billing • Dashboard</p>
 
       <label class="form-label">Username</label>
       <input id="username" class="form-control mb-3" placeholder="Username">
@@ -32,7 +31,7 @@
       </div>
 
       <div class="mt-3 text-center">
-        <a href="/landing" class="link-soft">ดูหน้าเสนอขาย</a>
+        <a href="/landing" class="link-soft">Landing page</a>
       </div>
     </div>
   </div>
@@ -44,16 +43,16 @@
       <div class="sidebar-head">
         <div>
           <div class="sidebar-brand">CRM PRO</div>
-          <div class="sidebar-caption">Notion / Stripe style</div>
+          <div class="sidebar-caption">Workspace</div>
         </div>
         <button class="icon-btn d-lg-none" onclick="closeSidebar()">×</button>
       </div>
 
       <nav class="nav-stack">
-        <button class="nav-pill active" data-nav="dashboardPage" onclick="showPage('dashboardPage')">🏠 Dashboard</button>
-        <button class="nav-pill" data-nav="customersPage" onclick="showPage('customersPage')">👥 Customers</button>
-        <button class="nav-pill" data-nav="billingPage" onclick="showPage('billingPage')">💳 Billing</button>
-        <button class="nav-pill" data-nav="settingsPage" onclick="showPage('settingsPage')">⚙️ Settings</button>
+        <button class="nav-pill active" data-nav="dashboardPage" onclick="showPage('dashboardPage')">Dashboard</button>
+        <button class="nav-pill" data-nav="customersPage" onclick="showPage('customersPage')">Customers</button>
+        <button class="nav-pill" data-nav="billingPage" onclick="showPage('billingPage')">Billing</button>
+        <button class="nav-pill" data-nav="settingsPage" onclick="showPage('settingsPage')">Settings</button>
       </nav>
 
       <div class="sidebar-footer">
@@ -69,7 +68,7 @@
           <div>
             <div class="eyebrow">Workspace</div>
             <h1 id="pageTitle" class="page-title">Dashboard</h1>
-            <p id="pageSubtitle" class="page-subtitle mb-0">ภาพรวมลูกค้า แผนสมาชิก และยอดใช้งาน</p>
+            <p id="pageSubtitle" class="page-subtitle mb-0">ภาพรวมบัญชี</p>
           </div>
         </div>
 
@@ -81,7 +80,7 @@
             <button class="menu-button" onclick="toggleProfileMenu(event)">⋮</button>
             <div id="profileMenu" class="profile-dropdown">
               <button type="button" onclick="showPage('settingsPage')">Profile</button>
-              <button type="button" onclick="showPage('billingPage')">Settings & Billing</button>
+              <button type="button" onclick="showPage('billingPage')">Billing</button>
               <button type="button" class="danger" onclick="logout()">Logout</button>
             </div>
           </div>
@@ -91,14 +90,8 @@
       <div id="impersonationBanner" class="crm-card mb-3 d-none">
         <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
           <div>
-            <div class="section-chip">Impersonation mode</div>
-            <div class="mt-2">
-              คุณกำลังดูระบบในมุมของ:
-              <strong id="impersonationName">-</strong>
-            </div>
-            <div class="text-soft small">
-              ใช้เช็ค PRO แบบลูกค้าจริง แล้วกดกลับเป็นแอดมินได้ทันที
-            </div>
+            <div class="section-chip">Impersonation</div>
+            <div class="mt-2">Current view: <strong id="impersonationName">-</strong></div>
           </div>
           <button class="btn btn-main" onclick="returnToAdmin()">Back to admin</button>
         </div>
@@ -107,15 +100,12 @@
       <section id="dashboardPage" class="page active fade-up">
         <div class="hero-card">
           <div class="hero-copy">
-            <span class="section-chip">Revenue-ready SaaS</span>
-            <h2>แยกงานขายลูกค้าออกจากงานจัดการให้ชัด และดูแพงตั้งแต่หน้าแรก</h2>
-            <p>
-              ระบบ CRM ที่ออกแบบให้เหมือนสินค้าซอฟต์แวร์จริง: sidebar มืออาชีพ, dashboard ชัด,
-              billing เป็นเรื่องเป็นราว และพร้อมใช้ขายลูกค้าจริง
-            </p>
+            <span class="section-chip">Overview</span>
+            <h2>Dashboard</h2>
+            <p class="hero-line mb-0">สถานะการใช้งานและลูกค้าทั้งหมด</p>
             <div class="hero-actions">
-              <button class="btn btn-main" onclick="showPage('customersPage')">เริ่มจัดการลูกค้า</button>
-              <button class="btn btn-outline-custom" data-upgrade-btn onclick="showPage('billingPage')">อัปเกรด PRO</button>
+              <button class="btn btn-main" onclick="showPage('customersPage')">Customers</button>
+              <button class="btn btn-outline-custom" data-upgrade-btn onclick="showPage('billingPage')">Upgrade</button>
             </div>
           </div>
 
@@ -155,7 +145,7 @@
             <div class="chart-card h-100">
               <div class="section-head">
                 <div>
-                  <h4 class="mb-1">Customer tags</h4>
+                  <h4 class="mb-1">Tags</h4>
                   <div class="text-soft small">New / VIP / Regular</div>
                 </div>
                 <span class="mini-pill">Live</span>
@@ -170,21 +160,14 @@
             <div class="feature-card h-100">
               <div class="section-head">
                 <div>
-                  <h4 class="mb-1">Quick actions</h4>
-                  <div class="text-soft small">ทางลัดใช้งานประจำวัน</div>
+                  <h4 class="mb-1">Actions</h4>
                 </div>
               </div>
 
-              <ul class="feature-list">
-                <li>เพิ่มลูกค้าใหม่เร็ว ๆ</li>
-                <li>ค้นหาข้อมูลได้ทันที</li>
-                <li>แก้ไข / ลบ / จัด tag</li>
-                <li>อัปเกรด PRO จาก Billing</li>
-              </ul>
-
-              <div class="d-grid gap-2 mt-4">
-                <button class="btn btn-main" onclick="showPage('customersPage')">ไปหน้า Customers</button>
-                <button class="btn btn-outline-custom" onclick="showPage('billingPage')">ไปหน้า Billing</button>
+              <div class="d-grid gap-2">
+                <button class="btn btn-main" onclick="showPage('customersPage')">Go to Customers</button>
+                <button class="btn btn-outline-custom" onclick="showPage('billingPage')">Go to Billing</button>
+                <button class="btn btn-outline-custom" onclick="showPage('settingsPage')">Go to Settings</button>
               </div>
             </div>
           </div>
@@ -195,18 +178,18 @@
         <div class="crm-card mb-3">
           <div class="section-head">
             <div>
-              <h4 class="mb-1">เพิ่มลูกค้า</h4>
-              <div class="text-soft small">Free plan เพิ่มได้ 5 คน</div>
+              <h4 class="mb-1">Customers</h4>
+              <div class="text-soft small">5 ลูกค้าฟรี</div>
             </div>
             <span class="mini-pill">CRM</span>
           </div>
 
           <div class="row g-2">
             <div class="col-md-4">
-              <input id="name" class="form-control" placeholder="ชื่อ">
+              <input id="name" class="form-control" placeholder="Name">
             </div>
             <div class="col-md-3">
-              <input id="phone" class="form-control" placeholder="เบอร์">
+              <input id="phone" class="form-control" placeholder="Phone">
             </div>
             <div class="col-md-3">
               <select id="tag" class="form-select">
@@ -223,7 +206,7 @@
 
         <div class="crm-card table-card">
           <div class="section-head">
-            <h4 class="mb-0">ลูกค้า</h4>
+            <h4 class="mb-0">List</h4>
             <input id="search" class="form-control search-input" placeholder="Search...">
           </div>
 
@@ -248,8 +231,8 @@
           <div class="payment-card text-center">
             <div class="section-head justify-content-center">
               <div>
-                <h4 class="mb-1">Billing / PromptPay</h4>
-                <div class="text-soft small">โอน 199 บาทเพื่อปลดล็อก PRO</div>
+                <h4 class="mb-1">Billing</h4>
+                <div class="text-soft small">199 บาท / เดือน</div>
               </div>
             </div>
 
@@ -261,16 +244,16 @@
           <div class="feature-card">
             <div class="section-head">
               <div>
-                <h4 class="mb-1">What PRO unlocks</h4>
-                <div class="text-soft small">สิ่งที่ลูกค้าได้ทันทีเมื่ออัปเกรด</div>
+                <h4 class="mb-1">PRO</h4>
+                <div class="text-soft small">เปิดใช้งานหลังชำระเงิน</div>
               </div>
             </div>
 
             <ul class="feature-list mb-4">
-              <li>ไม่จำกัดจำนวนลูกค้า</li>
+              <li>ไม่จำกัดลูกค้า</li>
               <li>Dashboard เต็มรูปแบบ</li>
               <li>Edit / Delete / Search</li>
-              <li>เหมาะกับร้านค้า ทีมเล็ก และงานขายจริง</li>
+              <li>เหมาะกับร้านและทีมขาย</li>
             </ul>
 
             <div class="mini-info-grid">
@@ -310,19 +293,14 @@
         <div class="crm-card mt-3">
           <div class="section-head">
             <div>
-              <h4 class="mb-1">Workspace controls</h4>
-              <div class="text-soft small">ตั้งค่าพื้นที่ทำงานและรีเฟรชข้อมูล</div>
+              <h4 class="mb-1">Workspace</h4>
             </div>
           </div>
 
           <div class="d-flex flex-wrap gap-2">
             <button class="btn btn-ghost" onclick="loadAll()">Refresh</button>
-            <button class="btn btn-outline-custom" onclick="showPage('billingPage')">Open Billing</button>
+            <button class="btn btn-outline-custom" onclick="showPage('billingPage')">Billing</button>
             <button class="btn btn-outline-custom" onclick="logout()">Logout</button>
-          </div>
-
-          <div class="mt-4 text-soft small">
-            ถ้าตั้ง `ADMIN_USERNAME` ใน Railway บัญชีชื่อนั้นจะถูกสร้างเป็น admin อัตโนมัติ
           </div>
         </div>
 
@@ -330,9 +308,9 @@
           <div class="section-head">
             <div>
               <h4 class="mb-1">Admin panel</h4>
-              <div class="text-soft small">ดู user ทั้งระบบ ปรับ plan และเปิดดูระบบในมุมลูกค้าได้</div>
+              <div class="text-soft small">Users</div>
             </div>
-            <span class="mini-pill">Owner only</span>
+            <span class="mini-pill">Owner</span>
           </div>
 
           <div class="table-responsive">
@@ -358,12 +336,12 @@
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content modal-dark">
         <div class="modal-header border-0">
-          <h5 class="modal-title">แก้ไขลูกค้า</h5>
+          <h5 class="modal-title">Edit customer</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body pt-0">
-          <input id="editName" class="form-control mb-2" placeholder="ชื่อ">
-          <input id="editPhone" class="form-control mb-2" placeholder="เบอร์">
+          <input id="editName" class="form-control mb-2" placeholder="Name">
+          <input id="editPhone" class="form-control mb-2" placeholder="Phone">
           <select id="editTag" class="form-select">
             <option>New</option>
             <option>VIP</option>
@@ -371,7 +349,7 @@
           </select>
         </div>
         <div class="modal-footer border-0">
-          <button type="button" class="btn btn-main" onclick="saveEdit()">บันทึก</button>
+          <button type="button" class="btn btn-main" onclick="saveEdit()">Save</button>
         </div>
       </div>
     </div>

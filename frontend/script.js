@@ -8,19 +8,19 @@ let tagChart = null;
 const pageMeta = {
   dashboardPage: {
     title: "Dashboard",
-    subtitle: "ภาพรวมลูกค้า แผนสมาชิก และยอดใช้งาน"
+    subtitle: "ภาพรวมบัญชี"
   },
   customersPage: {
     title: "Customers",
-    subtitle: "จัดการลูกค้า ค้นหา แก้ไข และลบข้อมูล"
+    subtitle: "จัดการลูกค้า"
   },
   billingPage: {
     title: "Billing",
-    subtitle: "PromptPay และการปลดล็อก PRO"
+    subtitle: "PromptPay / PRO"
   },
   settingsPage: {
     title: "Settings",
-    subtitle: "โปรไฟล์ บัญชี และสิทธิ์การใช้งาน"
+    subtitle: "บัญชีและสิทธิ์"
   }
 };
 
@@ -71,16 +71,15 @@ function closeProfileMenu() {
 }
 
 function updateSidebarPlan(plan) {
-  const sidebarPlanText = $("sidebarPlanText");
-  if (sidebarPlanText) {
-    sidebarPlanText.textContent = (plan || "free").toUpperCase();
+  const el = $("sidebarPlanText");
+  if (el) {
+    el.textContent = (plan || "free").toUpperCase();
   }
 }
 
 function updateImpersonationBanner() {
   const banner = $("impersonationBanner");
   const name = $("impersonationName");
-
   if (!banner || !name) return;
 
   const active = isImpersonating();
@@ -96,7 +95,6 @@ function updateAdminPanelVisibility() {
 
   const visible = currentRole === "admin" && !isImpersonating();
   adminPanel.classList.toggle("d-none", !visible);
-
   if (visible) {
     loadAdminUsers();
   }
@@ -126,6 +124,10 @@ function showPage(pageId) {
 
   closeProfileMenu();
 
+  if (pageId === "settingsPage") {
+    updateAdminPanelVisibility();
+  }
+
   if (window.innerWidth < 992) {
     closeSidebar();
   }
@@ -144,9 +146,7 @@ function setPlanUI(plan, remaining, role) {
 
   $("roleBadge").textContent = normalizedRole.toUpperCase();
   $("remainingCount").textContent = normalizedPlan === "pro" ? "∞" : String(remaining ?? 0);
-  $("paymentNote").textContent = normalizedPlan === "pro"
-    ? "คุณใช้งาน PRO แล้ว"
-    : "สแกน QR แล้วกดยืนยัน";
+  $("paymentNote").textContent = normalizedPlan === "pro" ? "PRO active" : "สแกน QR แล้วกดยืนยัน";
 
   $("heroPlanText").textContent = normalizedPlan.toUpperCase();
   $("heroRoleText").textContent = normalizedRole.toUpperCase();
@@ -205,7 +205,7 @@ async function login() {
 
     const data = await res.json();
     if (!res.ok) {
-      alert(data.error || "Login fail");
+      alert(data.error || "Login failed");
       return;
     }
 
@@ -221,7 +221,6 @@ async function login() {
 
     showApp();
     showPage("dashboardPage");
-    $("userLine").textContent = `${currentUser} • ${currentPlan.toUpperCase()}`;
     await refreshAll();
   } catch (error) {
     alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
@@ -248,7 +247,6 @@ function logout() {
 
 function saveAdminBackupOnce() {
   if (isImpersonating()) return;
-
   localStorage.setItem("crm_admin_backup_token", token);
   localStorage.setItem("crm_admin_backup_username", currentUser);
   localStorage.setItem("crm_admin_backup_plan", currentPlan);
@@ -262,7 +260,7 @@ async function returnToAdmin() {
   const backupRole = localStorage.getItem("crm_admin_backup_role");
 
   if (!backupToken || !backupUsername) {
-    alert("ไม่มี session แอดมินสำรอง");
+    alert("No admin session");
     return;
   }
 
@@ -290,6 +288,13 @@ async function refreshAll() {
   await Promise.all([loadDashboard(), loadCustomers()]);
 }
 
+async function loadAll() {
+  await refreshAll();
+  if (currentRole === "admin" && !isImpersonating()) {
+    await loadAdminUsers();
+  }
+}
+
 async function loadDashboard() {
   const res = await fetch("/dashboard", {
     headers: { "Authorization": `Bearer ${token}` }
@@ -308,7 +313,9 @@ async function loadDashboard() {
 
   $("totalCount").textContent = data.total ?? 0;
   $("vipCount").textContent = data.vip ?? 0;
-  $("userLine").textContent = `${currentUser} • ${String(data.plan || "free").toUpperCase()}`;
+  $("heroPlanText").textContent = String(data.plan || "free").toUpperCase();
+  $("heroRoleText").textContent = String(data.role || "user").toUpperCase();
+  $("heroRemainingText").textContent = data.plan === "pro" ? "∞" : String(data.remaining ?? 0);
 
   setPlanUI(data.plan || "free", data.remaining, data.role || currentRole);
   renderChart(data);
@@ -336,7 +343,7 @@ async function loadCustomers() {
   if (!data.length) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="4" class="text-center text-soft py-4">ยังไม่มีลูกค้า</td>
+        <td colspan="4" class="text-center text-soft py-4">No data</td>
       </tr>
     `;
     renderChart({ total: 0, vip: 0, counts: { New: 0, VIP: 0, Regular: 0 } });
@@ -386,7 +393,7 @@ async function addCustomer() {
   const data = await res.json();
 
   if (res.status === 403) {
-    alert("Free plan เพิ่มได้ 5 ลูกค้าเท่านั้น ต้องอัปเกรด PRO");
+    alert("Free plan เพิ่มได้ 5 ลูกค้าเท่านั้น");
     return;
   }
 
@@ -473,7 +480,7 @@ async function upgrade() {
   localStorage.setItem("plan", "pro");
   await refreshAll();
   showPage("billingPage");
-  alert("อัปเกรดสำเร็จ");
+  alert("PRO active");
 }
 
 function confirmPayment() {
@@ -569,21 +576,21 @@ async function loadAdminUsers() {
   if (!res.ok) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="5" class="text-center text-soft py-4">โหลด admin panel ไม่ได้</td>
+        <td colspan="5" class="text-center text-soft py-4">No admin data</td>
       </tr>
     `;
     return;
   }
 
   tbody.innerHTML = data.map((row) => {
-    const planBadge = row.plan === "pro" ? "plan-pro" : "plan-free";
+    const planBadge = row.plan === "pro" ? "plan-pro" : "badge-plan";
     const canChangeSelf = row.username === currentUser;
 
     return `
       <tr>
         <td>${escapeHtml(row.username)}</td>
-        <td><span class="badge-pill ${planBadge}">${escapeHtml(row.plan.toUpperCase())}</span></td>
-        <td>${escapeHtml(row.role.toUpperCase())}</td>
+        <td><span class="badge-pill ${planBadge}">${escapeHtml(String(row.plan || "free").toUpperCase())}</span></td>
+        <td>${escapeHtml(String(row.role || "user").toUpperCase())}</td>
         <td>${escapeHtml(row.customers)}</td>
         <td class="d-flex flex-wrap gap-2">
           <button class="btn btn-sm btn-outline-light" ${canChangeSelf ? "disabled" : ""} onclick="adminSetPlan(${row.id}, 'pro')">PRO</button>
@@ -598,23 +605,14 @@ async function loadAdminUsers() {
 }
 
 function renderChartFromCustomers(customers) {
-  const counts = {
-    New: 0,
-    VIP: 0,
-    Regular: 0
-  };
-
+  const counts = { New: 0, VIP: 0, Regular: 0 };
   customers.forEach((customer) => {
     const key = customer.tag || "New";
     if (counts[key] === undefined) counts[key] = 0;
     counts[key] += 1;
   });
 
-  renderChart({
-    total: customers.length,
-    vip: counts.VIP || 0,
-    counts
-  });
+  renderChart({ total: customers.length, vip: counts.VIP || 0, counts });
 }
 
 function renderChart(data) {
