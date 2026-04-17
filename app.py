@@ -13,17 +13,25 @@ SECRET = os.getenv("SECRET_KEY", "supersecret123")
 
 # ================= DB =================
 def get_db():
-    return mysql.connector.connect(
-        host=os.getenv("MYSQLHOST"),
-        user=os.getenv("MYSQLUSER"),
-        password=os.getenv("MYSQLPASSWORD"),
-        database=os.getenv("MYSQLDATABASE"),
-        port=int(os.getenv("MYSQLPORT"))
-    )
+    try:
+        return mysql.connector.connect(
+            host=os.getenv("MYSQLHOST"),
+            user=os.getenv("MYSQLUSER"),
+            password=os.getenv("MYSQLPASSWORD"),
+            database=os.getenv("MYSQLDATABASE"),
+            port=int(os.getenv("MYSQLPORT", 3306))
+        )
+    except Exception as e:
+        print("DB ERROR:", e)
+        return None
 
-# ================= CREATE TABLE =================
+# ================= SAFE TABLE CREATE =================
 def create_tables():
     db = get_db()
+    if not db:
+        print("❌ DB not ready → skip table create")
+        return
+
     cursor = db.cursor()
 
     cursor.execute("""
@@ -46,6 +54,7 @@ def create_tables():
     """)
 
     db.commit()
+    print("✅ tables ready")
 
 # ================= TOKEN =================
 def token_required(f):
@@ -72,10 +81,6 @@ def token_required(f):
 def home():
     return send_from_directory("frontend", "index.html")
 
-@app.route("/landing")
-def landing():
-    return send_from_directory("frontend", "landing.html")
-
 @app.route("/<path:path>")
 def static_files(path):
     return send_from_directory("frontend", path)
@@ -83,9 +88,11 @@ def static_files(path):
 # ================= AUTH =================
 @app.route("/register", methods=["POST"])
 def register():
-    data = request.json
-
     db = get_db()
+    if not db:
+        return jsonify({"error":"DB fail"}),500
+
+    data = request.json
     cursor = db.cursor()
 
     cursor.execute(
@@ -98,9 +105,11 @@ def register():
 
 @app.route("/login", methods=["POST"])
 def login():
-    data = request.json
-
     db = get_db()
+    if not db:
+        return jsonify({"error":"DB fail"}),500
+
+    data = request.json
     cursor = db.cursor(dictionary=True)
 
     cursor.execute(
@@ -116,10 +125,7 @@ def login():
             "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=5)
         }, SECRET, algorithm="HS256")
 
-        return jsonify({
-            "token": token,
-            "username": user["username"]
-        })
+        return jsonify({"token": token})
 
     return jsonify({"error": "login failed"}), 401
 
@@ -127,12 +133,14 @@ def login():
 @app.route("/customers", methods=["POST"])
 @token_required
 def add_customer(user_id):
-    data = request.json
-
     db = get_db()
+    if not db:
+        return jsonify({"error":"DB fail"}),500
+
+    data = request.json
     cursor = db.cursor()
 
-    # 🔥 LIMIT FREE PLAN
+    # LIMIT
     cursor.execute("SELECT COUNT(*) FROM customers WHERE user_id=%s", (user_id,))
     count = cursor.fetchone()[0]
 
@@ -143,7 +151,7 @@ def add_customer(user_id):
         return jsonify({"error": "upgrade required"}), 403
 
     cursor.execute(
-        "INSERT INTO customers (user_id, name, phone, tag) VALUES (%s, %s, %s, %s)",
+        "INSERT INTO customers (user_id, name, phone, tag) VALUES (%s,%s,%s,%s)",
         (user_id, data["name"], data["phone"], data["tag"])
     )
     db.commit()
@@ -154,6 +162,9 @@ def add_customer(user_id):
 @token_required
 def get_customers(user_id):
     db = get_db()
+    if not db:
+        return jsonify({"error":"DB fail"}),500
+
     cursor = db.cursor(dictionary=True)
 
     cursor.execute(
@@ -163,33 +174,21 @@ def get_customers(user_id):
 
     return jsonify(cursor.fetchall())
 
-@app.route("/customers/<int:id>", methods=["DELETE"])
-@token_required
-def delete_customer(user_id, id):
-    db = get_db()
-    cursor = db.cursor()
-
-    cursor.execute(
-        "DELETE FROM customers WHERE id=%s AND user_id=%s",
-        (id, user_id)
-    )
-    db.commit()
-
-    return jsonify({"message": "deleted"})
-
 # ================= UPGRADE =================
 @app.route("/upgrade", methods=["POST"])
 @token_required
 def upgrade(user_id):
     db = get_db()
-    cursor = db.cursor()
+    if not db:
+        return jsonify({"error":"DB fail"}),500
 
+    cursor = db.cursor()
     cursor.execute("UPDATE users SET plan='pro' WHERE id=%s", (user_id,))
     db.commit()
 
     return jsonify({"message": "upgraded"})
 
-# ================= RUN =================
+# ================= START =================
 if __name__ == "__main__":
     create_tables()
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
