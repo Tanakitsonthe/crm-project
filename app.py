@@ -21,7 +21,7 @@ def get_db():
         port=int(os.getenv("MYSQLPORT"))
     )
 
-# ================= CREATE TABLE =================
+# ================= AUTO CREATE TABLE =================
 def create_tables():
     db = get_db()
     cursor = db.cursor()
@@ -40,25 +40,25 @@ def create_tables():
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT,
         name VARCHAR(100),
-        phone VARCHAR(20)
+        phone VARCHAR(20),
+        tag VARCHAR(20)
     )
     """)
 
     db.commit()
-    cursor.close()
-    db.close()
+
 
 # ================= TOKEN =================
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        auth = request.headers.get("Authorization")
+        token = request.headers.get("Authorization")
 
-        if not auth:
+        if not token:
             return jsonify({"error": "No token"}), 401
 
         try:
-            token = auth.split(" ")[1] if auth.startswith("Bearer ") else auth
+            token = token.split(" ")[1]
             data = jwt.decode(token, SECRET, algorithms=["HS256"])
             user_id = data["user_id"]
         except:
@@ -68,6 +68,7 @@ def token_required(f):
 
     return decorated
 
+
 # ================= FRONT =================
 @app.route("/")
 def home():
@@ -76,6 +77,7 @@ def home():
 @app.route("/<path:path>")
 def static_files(path):
     return send_from_directory("frontend", path)
+
 
 # ================= AUTH =================
 @app.route("/register", methods=["POST"])
@@ -91,10 +93,8 @@ def register():
     )
     db.commit()
 
-    cursor.close()
-    db.close()
-
     return jsonify({"message": "registered"})
+
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -116,17 +116,13 @@ def login():
             "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=5)
         }, SECRET, algorithm="HS256")
 
-        cursor.close()
-        db.close()
-
         return jsonify({
             "token": token,
             "username": user["username"]
         })
 
-    cursor.close()
-    db.close()
     return jsonify({"error": "login failed"}), 401
+
 
 # ================= CUSTOMER =================
 @app.route("/customers", methods=["POST"])
@@ -137,22 +133,14 @@ def add_customer(user_id):
     db = get_db()
     cursor = db.cursor()
 
-    cursor.execute("SELECT COUNT(*) FROM customers WHERE user_id=%s", (user_id,))
-    count = cursor.fetchone()[0]
-
-    if count >= 5:
-        return jsonify({"error": "upgrade required"}), 403
-
     cursor.execute(
-        "INSERT INTO customers (user_id, name, phone) VALUES (%s, %s, %s)",
-        (user_id, data["name"], data["phone"])
+        "INSERT INTO customers (user_id, name, phone, tag) VALUES (%s, %s, %s, %s)",
+        (user_id, data["name"], data["phone"], data["tag"])
     )
     db.commit()
 
-    cursor.close()
-    db.close()
-
     return jsonify({"message": "added"})
+
 
 @app.route("/customers", methods=["GET"])
 @token_required
@@ -160,13 +148,45 @@ def get_customers(user_id):
     db = get_db()
     cursor = db.cursor(dictionary=True)
 
-    cursor.execute("SELECT * FROM customers WHERE user_id=%s", (user_id,))
-    data = cursor.fetchall()
+    cursor.execute(
+        "SELECT * FROM customers WHERE user_id=%s",
+        (user_id,)
+    )
 
-    cursor.close()
-    db.close()
+    return jsonify(cursor.fetchall())
 
-    return jsonify(data)
+
+@app.route("/customers/<int:id>", methods=["PUT"])
+@token_required
+def update_customer(user_id, id):
+    data = request.json
+
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute(
+        "UPDATE customers SET name=%s, phone=%s, tag=%s WHERE id=%s AND user_id=%s",
+        (data["name"], data["phone"], data["tag"], id, user_id)
+    )
+    db.commit()
+
+    return jsonify({"message": "updated"})
+
+
+@app.route("/customers/<int:id>", methods=["DELETE"])
+@token_required
+def delete_customer(user_id, id):
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute(
+        "DELETE FROM customers WHERE id=%s AND user_id=%s",
+        (id, user_id)
+    )
+    db.commit()
+
+    return jsonify({"message": "deleted"})
+
 
 # ================= DASHBOARD =================
 @app.route("/dashboard")
@@ -175,13 +195,29 @@ def dashboard(user_id):
     db = get_db()
     cursor = db.cursor()
 
-    cursor.execute("SELECT COUNT(*) FROM customers WHERE user_id=%s", (user_id,))
+    cursor.execute(
+        "SELECT COUNT(*) FROM customers WHERE user_id=%s",
+        (user_id,)
+    )
     total = cursor.fetchone()[0]
 
-    cursor.close()
-    db.close()
+    cursor.execute(
+        "SELECT COUNT(*) FROM customers WHERE user_id=%s AND tag='VIP'",
+        (user_id,)
+    )
+    vip = cursor.fetchone()[0]
 
-    return jsonify({"total": total})
+    return jsonify({
+        "total": total,
+        "vip": vip
+    })
+
+
+# ================= AI =================
+@app.route("/ai")
+def ai():
+    return jsonify({"insight": "🔥 ลูกค้าคุณโตเร็วมาก! ถึงเวลาอัปเกรดแล้ว"})
+
 
 # ================= RUN =================
 if __name__ == "__main__":
