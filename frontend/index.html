@@ -12,7 +12,7 @@
 <body>
 
   <div id="auth" class="auth-wrap">
-    <div class="auth-card">
+    <div class="auth-card fade-up">
       <div class="brand-chip mb-3">CRM PRO</div>
       <h1 class="mb-2">ช่วยจำลูกค้า และเพิ่มยอดขาย</h1>
       <p class="text-soft mb-4">ระบบจัดการลูกค้าสำหรับร้านค้าออนไลน์และธุรกิจขนาดเล็ก</p>
@@ -35,113 +35,185 @@
   </div>
 
   <div id="app" class="app-shell hidden">
-    <aside class="sidebar">
-      <div class="sidebar-title">🚀 CRM</div>
-      <div class="nav-list">
-        <div class="nav-pill">Dashboard</div>
-        <div class="nav-pill">Customers</div>
-        <div class="nav-pill">Payments</div>
+    <div class="sidebar-backdrop" onclick="closeSidebar()"></div>
+
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-top">
+        <div class="sidebar-title">🚀 CRM PRO</div>
+        <button class="icon-btn d-lg-none" onclick="closeSidebar()">×</button>
       </div>
+
+      <div class="nav-list">
+        <button class="nav-pill active" data-nav="dashboardPage" onclick="showPage('dashboardPage')">🏠 Dashboard</button>
+        <button class="nav-pill" data-nav="customersPage" onclick="showPage('customersPage')">👥 Customers</button>
+        <button class="nav-pill" data-nav="billingPage" onclick="showPage('billingPage')">💳 Billing</button>
+        <button class="nav-pill" data-nav="settingsPage" onclick="showPage('settingsPage')">⚙️ Settings</button>
+      </div>
+
       <div class="mt-4 text-soft small">
         ระบบจริงสำหรับร้านค้าออนไลน์
       </div>
     </aside>
 
     <main class="main-content">
-      <div class="topbar">
-        <div>
-          <h2 class="mb-1">Dashboard</h2>
-          <p id="userLine" class="text-soft mb-0">พร้อมใช้งาน</p>
+      <div class="topbar fade-up">
+        <div class="d-flex align-items-center gap-3">
+          <button class="hamburger d-lg-none" onclick="openSidebar()">☰</button>
+          <div>
+            <h2 class="mb-1">Dashboard</h2>
+            <p id="userLine" class="text-soft mb-0">พร้อมใช้งาน</p>
+          </div>
         </div>
+
         <div class="d-flex align-items-center gap-2">
+          <span id="roleBadge" class="badge-plan plan-free">USER</span>
           <span id="planBadge" class="badge-plan plan-free">FREE</span>
           <button class="btn btn-ghost" onclick="logout()">Logout</button>
         </div>
       </div>
 
-      <section class="row g-3 mb-3">
-        <div class="col-lg-4">
-          <div class="stat-card">
-            <div class="stat-label">Total customers</div>
-            <div id="totalCount" class="stat-value">0</div>
-          </div>
-        </div>
-        <div class="col-lg-4">
-          <div class="stat-card">
-            <div class="stat-label">VIP</div>
-            <div id="vipCount" class="stat-value">0</div>
-          </div>
-        </div>
-        <div class="col-lg-4">
-          <div class="stat-card">
-            <div class="stat-label">Free slots left</div>
-            <div id="remainingCount" class="stat-value">0</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="row g-3 mb-3">
-        <div class="col-lg-8">
-          <div class="chart-card">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-              <h4 class="mb-0">Customer tags</h4>
-              <span class="text-soft small">New / VIP / Regular</span>
+      <section id="dashboardPage" class="page active fade-up">
+        <section class="row g-3 mb-3">
+          <div class="col-lg-4">
+            <div class="stat-card">
+              <div class="stat-label">Total customers</div>
+              <div id="totalCount" class="stat-value">0</div>
             </div>
-            <canvas id="tagChart" height="120"></canvas>
           </div>
-        </div>
+          <div class="col-lg-4">
+            <div class="stat-card">
+              <div class="stat-label">VIP</div>
+              <div id="vipCount" class="stat-value">0</div>
+            </div>
+          </div>
+          <div class="col-lg-4">
+            <div class="stat-card">
+              <div class="stat-label">Free slots left</div>
+              <div id="remainingCount" class="stat-value">0</div>
+            </div>
+          </div>
+        </section>
 
-        <div class="col-lg-4">
-          <div class="payment-card text-center">
-            <h4>อัปเกรด PRO</h4>
-            <p class="text-soft mb-3">โอนผ่าน PromptPay 199 บาท</p>
-            <img src="/qr.png" alt="PromptPay QR" class="qr-image mb-3">
-            <p id="paymentNote" class="text-soft small mb-3">สแกน QR แล้วกดยืนยัน</p>
-            <button id="upgradeBtn" class="btn btn-warning w-100" onclick="confirmPayment()">ฉันโอนแล้ว</button>
+        <section class="row g-3 mb-3">
+          <div class="col-lg-8">
+            <div class="chart-card h-100">
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">Customer tags</h4>
+                <span class="text-soft small">New / VIP / Regular</span>
+              </div>
+              <canvas id="tagChart" height="120"></canvas>
+            </div>
+          </div>
+
+          <div class="col-lg-4">
+            <div class="payment-card text-center h-100">
+              <h4>อัปเกรด PRO</h4>
+              <p class="text-soft mb-3">โอนผ่าน PromptPay 199 บาท</p>
+              <img src="/qr.png" alt="PromptPay QR" class="qr-image mb-3">
+              <p id="paymentNote" class="text-soft small mb-3">สแกน QR แล้วกดยืนยัน</p>
+              <button id="upgradeBtn" class="btn btn-warning w-100" onclick="confirmPayment()">ฉันโอนแล้ว</button>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section id="customersPage" class="page fade-up" style="display:none">
+        <section class="crm-card mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0">เพิ่มลูกค้า</h4>
+            <span class="text-soft small">Free plan เพิ่มได้ 5 คน</span>
+          </div>
+          <div class="row g-2">
+            <div class="col-md-4">
+              <input id="name" class="form-control" placeholder="ชื่อ">
+            </div>
+            <div class="col-md-3">
+              <input id="phone" class="form-control" placeholder="เบอร์">
+            </div>
+            <div class="col-md-3">
+              <select id="tag" class="form-select">
+                <option>New</option>
+                <option>VIP</option>
+                <option>Regular</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <button class="btn btn-main w-100" onclick="addCustomer()">Add</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="crm-card table-card">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <h4 class="mb-0">ลูกค้า</h4>
+            <input id="search" class="form-control search-input" placeholder="Search...">
+          </div>
+
+          <div class="table-responsive">
+            <table class="table align-middle crm-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Tag</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="customers"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="billingPage" class="page fade-up" style="display:none">
+        <div class="crm-card">
+          <h4 class="mb-3">Billing / PromptPay</h4>
+          <div class="row g-3 align-items-center">
+            <div class="col-lg-6">
+              <div class="payment-card text-center">
+                <h4>อัปเกรด PRO</h4>
+                <p class="text-soft mb-3">โอนผ่าน PromptPay 199 บาท</p>
+                <img src="/qr.png" alt="PromptPay QR" class="qr-image mb-3">
+                <p class="text-soft small mb-3">สแกน QR แล้วกด “ฉันโอนแล้ว”</p>
+                <button class="btn btn-warning w-100" onclick="confirmPayment()">ฉันโอนแล้ว</button>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="stat-card h-100">
+                <div class="stat-label mb-2">What PRO unlocks</div>
+                <ul class="billing-list">
+                  <li>ไม่จำกัดจำนวนลูกค้า</li>
+                  <li>Dashboard เต็มรูปแบบ</li>
+                  <li>Edit / Delete / Search</li>
+                  <li>เหมาะกับร้านค้าและทีมเล็ก</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <section class="crm-card mb-3">
-        <h4 class="mb-3">เพิ่มลูกค้า</h4>
-        <div class="row g-2">
-          <div class="col-md-4">
-            <input id="name" class="form-control" placeholder="ชื่อ">
+      <section id="settingsPage" class="page fade-up" style="display:none">
+        <div class="crm-card">
+          <h4 class="mb-3">Settings</h4>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="stat-card">
+                <div class="stat-label">Current user</div>
+                <div id="settingsUser" class="stat-value">-</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="stat-card">
+                <div class="stat-label">Current role</div>
+                <div id="settingsRole" class="stat-value">-</div>
+              </div>
+            </div>
           </div>
-          <div class="col-md-3">
-            <input id="phone" class="form-control" placeholder="เบอร์">
+          <div class="mt-3 d-flex gap-2 flex-wrap">
+            <button class="btn btn-ghost" onclick="loadAll()">Refresh</button>
+            <button class="btn btn-outline-custom" onclick="logout()">Logout</button>
           </div>
-          <div class="col-md-3">
-            <select id="tag" class="form-select">
-              <option>New</option>
-              <option>VIP</option>
-              <option>Regular</option>
-            </select>
-          </div>
-          <div class="col-md-2">
-            <button class="btn btn-main w-100" onclick="addCustomer()">Add</button>
-          </div>
-        </div>
-      </section>
-
-      <section class="crm-card table-card">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-          <h4 class="mb-0">ลูกค้า</h4>
-          <input id="search" class="form-control search-input" placeholder="Search...">
-        </div>
-
-        <div class="table-responsive">
-          <table class="table align-middle crm-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Phone</th>
-                <th>Tag</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="customers"></tbody>
-          </table>
         </div>
       </section>
     </main>

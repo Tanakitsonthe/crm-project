@@ -1,6 +1,7 @@
 let token = localStorage.getItem("token") || "";
 let currentUser = localStorage.getItem("username") || "";
 let currentPlan = localStorage.getItem("plan") || "free";
+let currentRole = localStorage.getItem("role") || "user";
 let editCustomerId = null;
 let tagChart = null;
 
@@ -27,17 +28,50 @@ function showApp() {
   $("app").classList.remove("hidden");
 }
 
-function setPlanUI(plan, remaining) {
-  const badge = $("planBadge");
-  badge.textContent = plan ? plan.toUpperCase() : "FREE";
-  badge.classList.remove("plan-free", "plan-pro");
-  badge.classList.add(plan === "pro" ? "plan-pro" : "plan-free");
+function openSidebar() {
+  document.body.classList.add("sidebar-open");
+}
+
+function closeSidebar() {
+  document.body.classList.remove("sidebar-open");
+}
+
+function showPage(pageId) {
+  document.querySelectorAll(".page").forEach((page) => {
+    page.style.display = "none";
+    page.classList.remove("active");
+  });
+
+  const target = $(pageId);
+  if (target) {
+    target.style.display = "block";
+    target.classList.add("active");
+  }
+
+  document.querySelectorAll("[data-nav]").forEach((btn) => btn.classList.remove("active"));
+  const activeNav = document.querySelector(`[data-nav="${pageId}"]`);
+  if (activeNav) activeNav.classList.add("active");
+
+  if (window.innerWidth < 992) closeSidebar();
+}
+
+function setPlanUI(plan, remaining, role) {
+  const planBadge = $("planBadge");
+  planBadge.textContent = plan ? plan.toUpperCase() : "FREE";
+  planBadge.classList.remove("plan-free", "plan-pro");
+  planBadge.classList.add(plan === "pro" ? "plan-pro" : "plan-free");
+
+  const roleBadge = $("roleBadge");
+  roleBadge.textContent = (role || "user").toUpperCase();
 
   $("remainingCount").textContent = plan === "pro" ? "∞" : String(remaining ?? 0);
   $("paymentNote").textContent = plan === "pro"
     ? "คุณใช้งาน PRO แล้ว"
     : "สแกน QR แล้วกดยืนยัน";
+
   $("upgradeBtn").disabled = plan === "pro";
+  $("settingsUser").textContent = currentUser || "-";
+  $("settingsRole").textContent = (role || "user").toUpperCase();
 }
 
 async function register() {
@@ -83,13 +117,16 @@ async function login() {
     token = data.token;
     currentUser = data.username || "";
     currentPlan = data.plan || "free";
+    currentRole = data.role || "user";
 
     localStorage.setItem("token", token);
     localStorage.setItem("username", currentUser);
     localStorage.setItem("plan", currentPlan);
+    localStorage.setItem("role", currentRole);
 
     $("userLine").textContent = `${currentUser} • ${currentPlan.toUpperCase()}`;
     showApp();
+    showPage("dashboardPage");
     await refreshAll();
   } catch (error) {
     alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
@@ -100,9 +137,11 @@ function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("username");
   localStorage.removeItem("plan");
+  localStorage.removeItem("role");
   token = "";
   currentUser = "";
   currentPlan = "free";
+  currentRole = "user";
   location.reload();
 }
 
@@ -129,7 +168,7 @@ async function loadDashboard() {
   $("totalCount").textContent = data.total ?? 0;
   $("vipCount").textContent = data.vip ?? 0;
   $("userLine").textContent = `${currentUser} • ${String(data.plan || "free").toUpperCase()}`;
-  setPlanUI(data.plan || "free", data.remaining);
+  setPlanUI(data.plan || "free", data.remaining, data.role || currentRole);
 
   renderChart(data);
 }
@@ -159,7 +198,7 @@ async function loadCustomers() {
         <td colspan="4" class="text-center text-soft py-4">ยังไม่มีลูกค้า</td>
       </tr>
     `;
-    renderChart({ total: 0, vip: 0, plan: currentPlan, remaining: 5 });
+    renderChart({ total: 0, vip: 0, counts: { New: 0, VIP: 0, Regular: 0 } });
     return;
   }
 
@@ -363,14 +402,27 @@ function applySearchFilter() {
   });
 }
 
+function bindNavClicks() {
+  document.querySelectorAll("[data-nav]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("[data-nav]").forEach((x) => x.classList.remove("active"));
+      btn.classList.add("active");
+    });
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  bindNavClicks();
+
   $("search").addEventListener("input", applySearchFilter);
 
   if (token) {
     currentUser = localStorage.getItem("username") || "";
     currentPlan = localStorage.getItem("plan") || "free";
+    currentRole = localStorage.getItem("role") || "user";
     $("userLine").textContent = currentUser ? `${currentUser} • ${currentPlan.toUpperCase()}` : "พร้อมใช้งาน";
     showApp();
+    showPage("dashboardPage");
     refreshAll();
   } else {
     showAuth();

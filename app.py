@@ -15,6 +15,7 @@ CORS(app)
 app.config["JSON_AS_ASCII"] = False
 
 SECRET = os.getenv("SECRET_KEY", "change-this-secret")
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "").strip()
 
 # =========================
 # Password helpers
@@ -95,7 +96,8 @@ def create_tables():
         id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(100) NOT NULL,
         password VARCHAR(255) NOT NULL,
-        plan VARCHAR(20) NOT NULL DEFAULT 'free'
+        plan VARCHAR(20) NOT NULL DEFAULT 'free',
+        role VARCHAR(20) NOT NULL DEFAULT 'user'
     )
     """)
 
@@ -109,9 +111,11 @@ def create_tables():
     )
     """)
 
-    # migrations แบบปลอดภัย
     if not column_exists(cursor, "users", "plan"):
         cursor.execute("ALTER TABLE users ADD COLUMN plan VARCHAR(20) NOT NULL DEFAULT 'free'")
+
+    if not column_exists(cursor, "users", "role"):
+        cursor.execute("ALTER TABLE users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'user'")
 
     if not column_exists(cursor, "customers", "user_id"):
         cursor.execute("ALTER TABLE customers ADD COLUMN user_id INT NOT NULL DEFAULT 0")
@@ -196,9 +200,11 @@ def register():
             return jsonify({"error": "username already exists"}), 409
 
         stored_password = hash_password(password)
+        role = "admin" if ADMIN_USERNAME and username == ADMIN_USERNAME else "user"
+
         cursor.execute(
-            "INSERT INTO users (username, password, plan) VALUES (%s, %s, 'free')",
-            (username, stored_password)
+            "INSERT INTO users (username, password, plan, role) VALUES (%s, %s, 'free', %s)",
+            (username, stored_password, role)
         )
         db.commit()
         return jsonify({"message": "registered"})
@@ -226,7 +232,8 @@ def login():
     cursor = db.cursor(dictionary=True)
     try:
         cursor.execute(
-            "SELECT id, username, password, COALESCE(plan,'free') AS plan FROM users WHERE username=%s LIMIT 1",
+            "SELECT id, username, password, COALESCE(plan,'free') AS plan, COALESCE(role,'user') AS role "
+            "FROM users WHERE username=%s LIMIT 1",
             (username,)
         )
         user = cursor.fetchone()
@@ -247,7 +254,8 @@ def login():
         return jsonify({
             "token": token,
             "username": user["username"],
-            "plan": user["plan"]
+            "plan": user["plan"],
+            "role": user["role"]
         })
     finally:
         cursor.close()
@@ -394,9 +402,13 @@ def dashboard(user_id):
 
     cursor = db.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT COALESCE(plan,'free') AS plan FROM users WHERE id=%s LIMIT 1", (user_id,))
-        user = cursor.fetchone() or {"plan": "free"}
+        cursor.execute(
+            "SELECT COALESCE(plan,'free') AS plan, COALESCE(role,'user') AS role FROM users WHERE id=%s LIMIT 1",
+            (user_id,)
+        )
+        user = cursor.fetchone() or {"plan": "free", "role": "user"}
         plan = user["plan"]
+        role = user["role"]
 
         cursor.execute("SELECT COUNT(*) AS total FROM customers WHERE user_id=%s", (user_id,))
         total = cursor.fetchone()["total"]
@@ -410,6 +422,7 @@ def dashboard(user_id):
             "total": total,
             "vip": vip,
             "plan": plan,
+            "role": role,
             "remaining": remaining
         })
     finally:
@@ -437,9 +450,6 @@ def upgrade(user_id):
         db.close()
 
 
-# =========================
-# Local run
-# =========================
 if __name__ == "__main__":
     try:
         create_tables()
