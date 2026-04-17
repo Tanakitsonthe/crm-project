@@ -5,6 +5,7 @@ import jwt
 import datetime
 import os
 from functools import wraps
+import urllib.parse as urlparse
 
 app = Flask(__name__, static_folder="frontend")
 CORS(app)
@@ -14,12 +15,20 @@ SECRET = os.getenv("SECRET_KEY", "supersecret123")
 # ================= DB =================
 def get_db():
     try:
+        url = os.getenv("MYSQL_PUBLIC_URL")
+
+        if not url:
+            print("❌ NO MYSQL_PUBLIC_URL")
+            return None
+
+        url = urlparse.urlparse(url)
+
         return mysql.connector.connect(
-            host=os.getenv("MYSQLHOST"),
-            user=os.getenv("MYSQLUSER"),
-            password=os.getenv("MYSQLPASSWORD"),
-            database=os.getenv("MYSQLDATABASE"),
-            port=int(os.getenv("MYSQLPORT", 3306))
+            host=url.hostname,
+            user=url.username,
+            password=url.password,
+            database=url.path[1:],
+            port=url.port
         )
     except Exception as e:
         print("DB ERROR:", e)
